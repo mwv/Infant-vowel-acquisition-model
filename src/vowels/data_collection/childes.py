@@ -15,6 +15,11 @@
 '''
 data_collection.childes:
 
+
+TODO: account for 
+1. CHILDES markers for incompleteness etc
+2. diacritics, punctuation etc that are appended to words
+
 '''
 
 from __future__ import division
@@ -29,6 +34,7 @@ from glob import iglob
 from itertools import chain
 
 from ..config.paths import cfg_childesdir
+
 
 
 
@@ -67,8 +73,14 @@ class ChildesCorpus(object):
             for line in get_lines_from_interactors(fname, get_caregivers(fname, exclude_target_child = self.exclude_target_child)):
                 if self.exclude_identifiers:
                     if self.yield_words:
-                        for word in line[1]:
-                            yield word
+                        for word in line[1].split(' '):
+                            # take out punctuation
+                            m = re.match(r'(?P<word>[A-Za-z]+)', word)
+                            if m:
+                                word = m.group('word')
+                                yield word
+                            else:
+                                continue
                     else:
                         yield line[1]
                 else:
