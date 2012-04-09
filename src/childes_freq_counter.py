@@ -19,9 +19,11 @@ childes_freq_counter:
 from __future__ import division
 
 import vowels.data_collection.freq_counter as freq_counter
+from vowels.data_collection.celex import PhonLookup
 
 def run_childes():
-    result = freq_counter.count_childes_phons()
+    pl = PhonLookup
+    result = freq_counter.count_childes_phons(pl)
     print 'Number of processed word tokens: %d (%d unanalyzed)' % (result['n_word_tokens'], result['n_unrecognized_word_tokens'])
     print 'Total number of phone tokens: %d' % (result['n_phon_tokens_total'])
     print 'Total number of vowel tokens: %d' % (result['n_vowel_tokens_total'])

@@ -30,4 +30,6 @@ _module_path = os.path.dirname(os.path.abspath(__file__))
 cfg_datadir = os.path.realpath(os.path.join(_module_path, '../../../../data/'))
 cfg_celexdir = os.path.join(cfg_datadir, 'CELEX')
 cfg_childesdir = os.path.join(cfg_datadir, 'childes')
+cfg_ifadir = os.path.join(cfg_datadir, 'ifa')
+
 

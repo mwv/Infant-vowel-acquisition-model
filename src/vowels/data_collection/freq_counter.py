@@ -22,12 +22,12 @@ from __future__ import division
 __author__ = 'Maarten Versteegh'
 __date__ = 'Fri Apr  6 01:06:21 2012'
 
-from .celex import PhonLookup, vowels_sampa
+from .celex import vowels_sampa
 from .childes import ChildesCorpus
 
-def count_childes_phons(corpora=None):
+def count_childes_phons(phone_dict, corpora=None):
     """count phones in specified childes corpora"""
-    pl = PhonLookup()
+    pl = phone_dict
     cc = ChildesCorpus(corpora=corpora)
     
     word_token_cntr = 0
