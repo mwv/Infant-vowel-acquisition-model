@@ -14,12 +14,7 @@
 
 '''
 data_collection.childes:
-
-
-TODO: account for 
-1. CHILDES markers for incompleteness etc
-2. diacritics, punctuation etc that are appended to words
-
+interface with childes corpus
 '''
 
 from __future__ import division
@@ -38,7 +33,7 @@ from ..config.paths import cfg_childesdir
 
 class ChildesCorpus(object):
     def __init__(self, 
-                 corpora=None, # list of speakers to include
+                 corpora=None, # list of corpora to include
                  exclude_target_child=True, # do not yield utterances of the target child
                  exclude_identifiers=True, # yield just the utterances, not who speaks them
                  yield_words=True, # yield words instead of lines

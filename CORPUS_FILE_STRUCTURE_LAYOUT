@@ -1,0 +1,30 @@
+The code here assumes the following file structure layout. 
+If you want to run the code without modifying it, you need to set up (symbolic) links to your corpora like this:
+
+/data
+  /ifa
+    /textgrids
+      /F20N
+      ...
+    /wavs
+      /F20N
+      ...
+  /CELEX
+    /DUTCH
+      /DPW
+        /DPW.CD
+        ..
+      ..
+    ..
+  /childes
+    /BolKuiken
+      /.cha files
+    ..
+/vowels
+  README
+  COPYING
+  /src
+  ...
+  (i.e. this project)
+  
+If needed I might change the code in the future to take filepaths as arguments, for more flexibility.
