@@ -7,3 +7,5 @@ Radboud University Nijmegen
 Licensed under GPLv3
 
 Extract frequency and acoustic similarity information from infant- and adult-directed speech.
+
+See CORPUS_FILE_STRUCTURE_LAYOUT for information on how to set up paths etc.
