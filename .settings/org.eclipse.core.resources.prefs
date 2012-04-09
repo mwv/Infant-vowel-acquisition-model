@@ -1,6 +1,6 @@
-#Mon Apr 09 15:15:59 CEST 2012
+#Mon Apr 09 19:25:19 CEST 2012
 eclipse.preferences.version=1
-encoding//src/childes_freq_counter.py=utf-8
+encoding//src/frequency_extractor.py=utf-8
 encoding//src/main.py=utf-8
 encoding//src/vowels/config/paths.py=utf-8
 encoding//src/vowels/data_collection/celex.py=utf-8

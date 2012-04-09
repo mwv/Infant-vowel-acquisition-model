@@ -68,37 +68,7 @@ def transToSampa(trans):
 def stripSyllableMarkers(trans):
     return re.sub("-","",trans)
 
-vowels_sampa = set(
-                ['i:', # liep
-                'y:', # buut
-                'e:', # leeg
-                '|:', # deuk
-                'a:', # laat
-                'o:', # boom
-                'u:', # boek
-                'I',  # lip
-                'E',  # leg
-                'A',  # lat
-                'O',  # bom
-                '}',  # put
-                '@',  # schwa
-                'i::', # analyse
-                'y::', # centrifuge
-                'E:',  # scene
-                '/:',  # freule
-                'Q:',  # zone
-                'EI',  # wijs
-                '/I',  # huis
-                'Au',  # koud
-                '{', # trap (eng)
-                '6', # open schwa
-                '3', # nurse (eng)
-                '2', # deux (fr)
-                '9', # neuf (fr)
-                '&', # open front rounded
-                'U', # foot (eng)
-                'V', # strut (eng)
-                'Y']) # huebsch (de)
+
 
 disc_to_sampa = bidict({
     ' ':' ',

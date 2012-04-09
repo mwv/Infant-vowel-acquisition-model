@@ -38,7 +38,7 @@ from ..config.paths import cfg_childesdir
 
 class ChildesCorpus(object):
     def __init__(self, 
-                 corpora=None, # list of corpora to include
+                 corpora=None, # list of speakers to include
                  exclude_target_child=True, # do not yield utterances of the target child
                  exclude_identifiers=True, # yield just the utterances, not who speaks them
                  yield_words=True, # yield words instead of lines
@@ -47,9 +47,9 @@ class ChildesCorpus(object):
         valid_corpora = [d for d in os.listdir(cfg_childesdir)
                          if os.path.isdir(os.path.join(cfg_childesdir, d))]
         if corpora is None:
-            self.corpora = valid_corpora
+            self.speakers = valid_corpora
         elif all(x in valid_corpora for x in corpora):
-            self.corpora = corpora
+            self.speakers = corpora
         else:
             raise ValueError, 'Invalid corpus choice. Valid choices are %s' % ', '.join(valid_corpora)
         
@@ -60,14 +60,14 @@ class ChildesCorpus(object):
     def list_directories(self, abspath=True):
         if abspath:
             return [os.path.join(cfg_childesdir, x)
-                    for x in self.corpora]
+                    for x in self.speakers]
         else:
-            return self.corpora
+            return self.speakers
         
     def __iter__(self):
         """iterate over the utterances of caregivers"""
         for fname in chain.from_iterable(iglob(os.path.join(cfg_childesdir, d, '*.cha'))
-                                         for d in self.corpora):
+                                         for d in self.speakers):
             for line in get_lines_from_interactors(fname, get_caregivers(fname, exclude_target_child = self.exclude_target_child)):
                 if self.exclude_identifiers:
                     if self.yield_words:
