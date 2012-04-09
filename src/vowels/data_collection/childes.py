@@ -78,7 +78,7 @@ class ChildesCorpus(object):
                             m = re.match(r'(?P<word>[A-Za-z]+)', word)
                             if m:
                                 word = m.group('word')
-                                yield word
+                                yield word.lower()
                             else:
                                 continue
                     else:
