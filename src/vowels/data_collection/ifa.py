@@ -45,7 +45,7 @@ class IFA_TextGrids(object):
         elif all(x in valid_speakers for x in speakers):
             self.speakers = speakers
         else:
-            raise ValueError, 'Invalid corpus choice. Valid choices are %s' % ', '.join(valid_speakers)
+            raise ValueError, 'Invalid speaker choice. Valid choices are %s' % ', '.join(valid_speakers)
     
     def iter_textgrids(self):
         """Generator object for TextGrid objects in specified speakers"""
