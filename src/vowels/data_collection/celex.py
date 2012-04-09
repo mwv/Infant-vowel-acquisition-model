@@ -15,6 +15,8 @@
 '''
 data_collection.celex:
 interface to dutch phonetic transcriptions of wordforms in celex corpus
+
+sampa specification: http://www.phon.ucl.ac.uk/home/sampa/
 '''
 
 from __future__ import division

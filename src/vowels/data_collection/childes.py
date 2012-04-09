@@ -36,8 +36,6 @@ from itertools import chain
 from ..config.paths import cfg_childesdir
 
 
-
-
 class ChildesCorpus(object):
     def __init__(self, 
                  corpora=None, # list of corpora to include
