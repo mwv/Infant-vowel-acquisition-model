@@ -8,4 +8,8 @@ Licensed under GPLv3
 
 Extract frequency and acoustic similarity information from infant- and adult-directed speech.
 
-See CORPUS_FILE_STRUCTURE_LAYOUT for information on how to set up paths etc.
+To run the example for extracting frequency counts I sent around:
+- make sure you have python2.7 installed
+- install bidict from pypi (http://pypi.python.org/pypi/bidict/0.1.1) if you haven't already
+- set up your file paths as outlined in CORPUS_FILE_STRUCTURE_LAYOUT
+- run frequency_extractor.py script in /src directory
