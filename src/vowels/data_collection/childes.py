@@ -39,18 +39,20 @@ class ChildesCorpus(object):
                  yield_words=True, # yield words instead of lines
                  exclude_eol=True): # exclude eol markers
         # assume only corpus directories in cfg_childesdir
-        valid_corpora = [d for d in os.listdir(cfg_childesdir)
-                         if os.path.isdir(os.path.join(cfg_childesdir, d))]
         if corpora is None:
-            self.speakers = valid_corpora
-        elif all(x in valid_corpora for x in corpora):
+            self.speakers = self.valid_corpora()
+        elif all(x in self.valid_corpora() for x in corpora):
             self.speakers = corpora
         else:
-            raise ValueError, 'Invalid corpus choice. Valid choices are %s' % ', '.join(valid_corpora)
+            raise ValueError, 'Invalid corpus choice. Valid choices are %s' % ', '.join(self.valid_corpora())
         
         self.exclude_target_child = exclude_target_child
         self.exclude_identifiers = exclude_identifiers
         self.yield_words = yield_words
+        
+    @classmethod
+    def valid_corpora(cls):
+        return [d for d in os.listdir(cfg_childesdir) if os.path.isdir(os.path.join(cfg_childesdir, d))]
         
     def list_directories(self, abspath=True):
         if abspath:

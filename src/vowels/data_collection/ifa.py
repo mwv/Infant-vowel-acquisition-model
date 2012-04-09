@@ -37,15 +37,16 @@ class IFA_TextGrids(object):
     """ interface to ifa's textgrids"""
     def __init__(self,
                  speakers=None):
-        valid_speakers = [d for d in os.listdir(ifa_tgdir)
-                         if os.path.isdir(os.path.join(ifa_tgdir, d))]
-        
         if speakers is None:
-            self.speakers = valid_speakers
-        elif all(x in valid_speakers for x in speakers):
+            self.speakers = self.valid_speakers()
+        elif all(x in self.valid_speakers() for x in speakers):
             self.speakers = speakers
         else:
-            raise ValueError, 'Invalid speaker choice. Valid choices are %s' % ', '.join(valid_speakers)
+            raise ValueError, 'Invalid speaker choice. Valid choices are %s' % ', '.join(self.valid_speakers())
+        
+    @classmethod
+    def valid_speakers(cls):
+        return [d for d in os.listdir(ifa_tgdir) if os.path.isdir(os.path.join(ifa_tgdir, d))]
     
     def iter_textgrids(self):
         """Generator object for TextGrid objects in specified speakers"""
