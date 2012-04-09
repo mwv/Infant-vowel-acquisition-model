@@ -104,10 +104,10 @@ vowels_sampa = set(
                 'U', # foot (eng)
                 'V', # strut (eng)
                 'Y', # huebsch (de)
-                'E~', # vaccin
-                'A~',
-                'O~',
-                'Y~'])
+                'E~', # vacc_in_ (fr)
+                'A~', # croiss_ant_ (fr)
+                'O~', # c_o_nge (fr)
+                'Y~']) # parf_um_ (fr)
 
  
 
