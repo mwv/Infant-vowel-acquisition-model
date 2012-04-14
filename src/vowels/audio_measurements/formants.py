@@ -46,14 +46,23 @@ def _float(s):
         return np.nan
 
 @memoize
-def _get_formants_from_file(filename, maxformant=5500, winlen=0.025, preemph=50):
+def _forms_from(filename, maxformant=5500, winlen=0.025, preemph=50):
+    """extract formant table from file using praat
+    returns and ndarray laid out as:
+    [time f1 f2 f3
+    ...]
+    
+    formants that praat returns as undefined are represented as nans
+    
+    this function is memoized to minimize the number of calls to praat
+    """
     res = run_praat('vowels/audio_measurements/extract_formants_single.praat', filename, maxformant, winlen, preemph)
     return np.array(map(lambda x:map(_float,x.rstrip().split('\t')[:4]), res.split('\n')[1:-1]))
 
     
-def _extract_formants(filename, time, maxformant=5500, winlen=0.025, preemph=50):
-    """ extract f1, f2, f3 formants from speech file"""
-    formants_array = _get_formants_from_file(filename, maxformant=maxformant, winlen=winlen, preemph=preemph)
+def _extr_forms_at(filename, time, maxformant=5500, winlen=0.025, preemph=50):
+    """ extract f1, f2, f3 formants from speech file at time t"""
+    formants_array = _forms_from(filename, maxformant=maxformant, winlen=winlen, preemph=preemph)
     try:
         res = formants_array[bisect_left(formants_array[:,0],time),1:]
     except IndexError:
@@ -62,7 +71,7 @@ def _extract_formants(filename, time, maxformant=5500, winlen=0.025, preemph=50)
         raise FormantError, 'undefined formant found'
     return res
     
-def measure_ifa_formants(percentile=0.05):
+def measure_ifa_formants(percentile=0.05, init_alloc=10000, verbose=False):
     """returns a dict from vowels to list of measurements
     
     measurements are laid out in an 10-dimensional array as follows:
@@ -77,10 +86,19 @@ def measure_ifa_formants(percentile=0.05):
     8 : F3_end
     9 : duration
     
+    Arguments:
+    - percentile : percentile of total duration of vowel to take boundary measurements
+                   'begin' will be taken at xmin + duration*percentile
+                   'end' will be taken at xmax - duration*percentile
+    - init_alloc : initial allocation for number of vowels to be expected. 
+                   make sure this number is set high enough (depends on corpus)
+    
     """
     corpus = ifa.IFA()
-    result = {} # dict from vowels to list of measurements
-    undefined_formants_found = 0
+#    result = {} # dict from vowels to list of measurements
+    result = dict((x, np.empty((init_alloc, 10))) for x in vowels_sampa)
+    nobs = dict((x, 0) for x in vowels_sampa) # number of observations per vowel
+    undefined = 0
     for tg in corpus.iter_textgrids():
         basename = tg.name
         female = basename[0] == 'F'
@@ -101,23 +119,28 @@ def measure_ifa_formants(percentile=0.05):
                 middle = xmin + delta/2
                 end = xmax - delta*percentile
                 #print '%s - %s (%.3f, %.3f)' % (basename, mark, xmin, xmax)
-                print '%s - %s (%.3f,%.3f,%.3f)' % (basename, mark, begin, middle, end) 
+                if verbose:
+                    print '%s - %s (%.3f,%.3f,%.3f)' % (basename, mark, begin, middle, end) 
                 try:    
-                    begin = _extract_formants(wavname, begin, maxformant=(5500 if female else 5000))
-                    middle = _extract_formants(wavname, middle, maxformant=(5500 if female else 5000))
-                    end = _extract_formants(wavname, end, maxformant=(5500 if female else 5000))
+                    begin = _extr_forms_at(wavname, begin, maxformant=(5500 if female else 5000))
+                    middle = _extr_forms_at(wavname, middle, maxformant=(5500 if female else 5000))
+                    end = _extr_forms_at(wavname, end, maxformant=(5500 if female else 5000))
                 except FormantError:
                     # just skip vowels with undefined formants
-                    undefined_formants_found += 1
+                    undefined += 1
                     continue
 
                 vector = np.hstack((begin, middle, end, np.array(delta)))
-                try:
-                    result[mark].append(vector)
-                except:
-                    result[mark] = [np.hstack(vector)]
-                    
-    print 'undefined formants found: %d' % undefined_formants_found
+                result[mark][nobs[mark]] = vector
+                nobs[mark] += 1
+#                try:
+#                    result[mark].append(vector)
+#                except:
+#                    result[mark] = [np.hstack(vector)]
+    if verbose:                    
+        print 'undefined formants found: %d' % undefined
+    for vowel in result:
+        result[vowel].resize((nobs[vowel], 10))
     return result
                 
                 
