@@ -25,14 +25,16 @@ from .praat_interact import run_praat
 from ..util.decorators import memoize
 
 @memoize
-def get_formants_from_file(filename, maxformant=5500, winlen=0.025, preemph=50):
+def _get_formants_from_file(filename, maxformant=5500, winlen=0.025, preemph=50):
     res = run_praat('vowels/audio_measurements/extract_formants_single.praat', filename, maxformant, winlen, preemph)
     res = np.array(map(lambda x:map(float,x.rstrip().split('\t')[:4]),res[1:]))
     return res
     
 def extract_formants(filename, time, maxformant=5500, winlen=0.025, preemph=50):
     """ extract f1, f2, f3 formants from speech file"""
-    formants_array = get_formants_from_file(filename, maxformant=maxformant, winlen=winlen, preemph=preemph)
-    # TODO check if this is correct
-    return formants_array[bisect_left(formants_array[:,0],time),1:]
+    formants_array = _get_formants_from_file(filename, maxformant=maxformant, winlen=winlen, preemph=preemph)
+    try:
+        return formants_array[bisect_left(formants_array[:,0],time),1:]
+    except IndexError:
+        raise ValueError, 'time out of range of filelength'
 
