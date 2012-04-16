@@ -31,5 +31,12 @@ cfg_datadir = os.path.realpath(os.path.join(_module_path, '../../../../data/'))
 cfg_celexdir = os.path.join(cfg_datadir, 'CELEX')
 cfg_childesdir = os.path.join(cfg_datadir, 'childes')
 cfg_ifadir = os.path.join(cfg_datadir, 'ifa')
+cfg_dumpdir = os.path.join(cfg_datadir, 'dumps')
+if not os.path.exists(cfg_dumpdir):
+    os.makedirs(cfg_dumpdir)
+    
+cfg_figdir = os.path.join(cfg_datadir, 'figs')
+if not os.path.exists(cfg_figdir):
+    os.makedirs(cfg_figdir)
 
 
