@@ -1,1 +1,1 @@
-from memoize import memoize
+from memoize import memoize, instance_memoize

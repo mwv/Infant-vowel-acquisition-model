@@ -29,7 +29,7 @@ import os
 
 from bidict import bidict
 from ..config.paths import cfg_celexdir
-from ..util.transcipt_formats import disc_to_sampa
+from ..util.transcript_formats import disc_to_sampa
 
 CELEX_FILE = os.path.join(cfg_celexdir, 'DUTCH/DPW/DPW.CD')
 
