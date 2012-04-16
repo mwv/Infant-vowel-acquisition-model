@@ -15,7 +15,7 @@
 '''
 vowels.data_collection.ifa:
 
-interface to ifa textgrid files.
+interface to ifa corpus
 
 only using FR (fixed text retold), VI (variable informal story), VR (variable story retold)
 
@@ -30,23 +30,32 @@ from bidict import bidict
 
 from ..config.paths import cfg_ifadir
 from .textgrid import TextGrid
+from ..util.transcript_formats import cgn_to_sampa
 
 ifa_tgdir = os.path.join(cfg_ifadir, 'textgrids')
+ifa_wavdir = os.path.join(cfg_ifadir, 'wavs')
 
-class IFA_TextGrids(object):
+def valid_speakers():
+    return [d for d in os.listdir(ifa_tgdir) if os.path.isdir(os.path.join(ifa_tgdir, d))]
+    
+def female_speakers():
+    return filter(lambda x:x.startswith('F'), valid_speakers())
+    
+def male_speakers():
+    return filter(lambda x:x.startswith('M'), valid_speakers())
+
+class IFA(object):
     """ interface to ifa's textgrids"""
     def __init__(self,
                  speakers=None):
         if speakers is None:
-            self.speakers = self.valid_speakers()
-        elif all(x in self.valid_speakers() for x in speakers):
+            self.speakers = valid_speakers()
+        elif all(x in valid_speakers() for x in speakers):
             self.speakers = speakers
         else:
             raise ValueError, 'Invalid speaker choice. Valid choices are %s' % ', '.join(self.valid_speakers())
         
-    @classmethod
-    def valid_speakers(cls):
-        return [d for d in os.listdir(ifa_tgdir) if os.path.isdir(os.path.join(ifa_tgdir, d))]
+
     
     def iter_textgrids(self):
         """Generator object for TextGrid objects in specified speakers"""
@@ -67,73 +76,8 @@ class IFA_TextGrids(object):
                 mark = re.sub(r'[\^\d]+$','',interval.mark)
                 # convert mark
                 try:
-                    mark = sampa_to_cgn[:mark]
+                    mark = cgn_to_sampa(mark)
                 except:
                     # not a phonemic marker
                     continue
                 yield mark
-
-sampa_to_cgn = bidict({
-' ' : ' ',                       
-'p' : 'p',
-'b' : 'b',
-'t' : 't',
-'d' : 'd',
-'k' : 'k',
-'g' : 'g',
-'f' : 'f',
-'v' : 'v',
-'s' : 's',
-'z' : 'z',
-'S' : 'S',
-'Z' : 'Z',
-'x' : 'x',
-'G' : 'G',
-'h' : 'h',
-'N' : 'N',
-'m' : 'm',
-'n' : 'n',
-'nj' : 'J',
-'l' : 'l',
-'r' : 'r',
-'w' : 'w',
-'j' : 'j',
-'I' : 'I',
-'E' : 'E',
-'A' : 'A',
-'O' : 'O',
-'}' : 'Y',
-'i:' : 'i',
-'y:' : 'y',
-'e:' : 'e',
-'|:' : '2',
-'a:' : 'a',
-'o:' : 'o',
-'u:' : 'u',
-'@' : '@',
-'EI' : 'E+',
-'/I' : '9+',
-'Au' : 'O+',
-'E:' : 'E:',
-'/:' : '9:',
-'Q:' : 'O:',
-'E~' : 'E~',
-'A~' : 'A~',
-'O~' : 'O~',
-'Y~' : 'Y~'
-})
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
