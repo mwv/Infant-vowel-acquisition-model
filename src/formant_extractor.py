@@ -37,7 +37,7 @@ import scipy.stats as stats
 
 import vowels.data_collection.ifa as ifa
 import vowels.config.paths as paths
-from vowels.util.standards import vowels_sampa, sampa_to_unicode
+from vowels.util.transcript_formats import vowels_sampa, sampa_to_unicode
 from vowels.config.paths import cfg_figdir
 from vowels.util.functions import hertz_to_bark, hertz_to_mel
 import vowels.audio_measurements.formants as formants
@@ -56,9 +56,11 @@ def plot_vowels(outfiletag,
     allowed_scales = ['log', 'linear', 'bark','mel']
     if not scale in allowed_scales:
         raise ValueError, 'scale must be one of [%s]' % ', '.join(allowed_scales)
-        
 
-    forms = formants.measure_ifa_formants(speakers=speakers, verbose=verbose)
+    fm = formants.IFAFormantsMeasure()
+    forms = fm.sample(vowels, speakers=speakers, scale='hertz')
+    fm.close()
+    
     vowels = filter(lambda x:forms[x].shape[0] >= minsamples, vowels)    
     # plot the static F1, F2
     fig = plt.figure()
@@ -87,15 +89,7 @@ def plot_vowels(outfiletag,
         
         f2 = f2[mask]
         f1 = f1[mask]
-                
-        # rescale if necessary
-        if scale == 'bark':
-            f2 = hertz_to_bark(f2)
-            f1 = hertz_to_bark(f1)
-        elif scale == 'mel':
-            f2 = hertz_to_mel(f2)
-            f1 = hertz_to_mel(f1)
-        
+      
         xs.append(f2)
         ys.append(f1)
         min_f2 = np.min(f2)
@@ -145,27 +139,13 @@ def plot_vowels(outfiletag,
         plt.yscale('log')
     plt.legend(loc='lower left')
     plt.savefig(os.path.join(cfg_figdir, outfiletag+'.png'))
-        
-    
-
-
-def run():
-    wavname = os.path.join(paths.cfg_ifadir, 'wavs', 'F28G', 'F28G1VI11A-A_fm.wav')
-    print formants._extr_forms_at(wavname, 0.5)
-    
-    res = formants.measure_ifa_formants()
     
 if __name__ == '__main__':
-#    plot_vowels('vowel_plot_triangle_fem', 
-#                vowels=['I','E','}'], 
-#                scale='linear', 
-#                percentile=99,
-#                speakers=ifa.female_speakers())
-    plot_vowels('vowel_triangle',
+    plot_vowels('vowel_triangle_new',
                 scale='linear',
                 vowels=['I','E','}'],
                 percentile=98,
                 speakers=None)
-#                speakers=ifa.female_speakers())
+
                 
 
