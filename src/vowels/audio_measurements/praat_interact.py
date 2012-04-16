@@ -27,15 +27,10 @@ class PraatError(Exception):
     
 def run_praat(*args):
     """run praat with arguments and return result as c string"""
-    p = Popen(['praat'] + list(args),
-              shell=False,
-              stdin=PIPE,
-              stdout=PIPE,
-              stderr=PIPE)
-    p.wait()
-    stdout = p.stdout
-    stderr = p.stderr
+    p = Popen(['praat'] + map(str, list(args)), shell=False, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+    stdout, stderr = p.communicate()
+
     if p.returncode:
         raise PraatError(''.join(stderr.readlines()))
     else:
-        return stdout.readlines()
+        return stdout
