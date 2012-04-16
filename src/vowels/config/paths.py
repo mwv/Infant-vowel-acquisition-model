@@ -17,8 +17,6 @@ config.paths:
 
 '''
 
-from __future__ import division
-
 __author__ = 'Maarten Versteegh'
 __date__ = 'Apr 7, 2012'
 
