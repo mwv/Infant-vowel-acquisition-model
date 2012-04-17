@@ -72,7 +72,6 @@ class IFAFormantsMeasure(object):
         self.females = ifa.female_speakers()
         self.males = ifa.male_speakers()
         self.vowels = vowels_sampa
-        self.features = ['F1','F2','F3', 'F1d','F2d','F3d','duration','all']
         self.verbose=verbose
         
         if db_name is None:
@@ -80,7 +79,8 @@ class IFAFormantsMeasure(object):
         else:
             self._db_name = db_name
         if force_rebuild:
-            os.remove(self._db_name)
+            if os.path.exists(self._db_name):
+                os.remove(self._db_name)
             self._build_db()        
         if not os.path.exists(self._db_name):
             self._build_db()
@@ -138,11 +138,10 @@ class IFAFormantsMeasure(object):
             for vowel in result[speaker]:
                 result[speaker][vowel].resize((nobs[speaker][vowel],10))
         # save the results in the database
-        self._db =  shelve.open(self._db_name)                
+        db =  shelve.open(self._db_name)                
         for speaker in result:
             self._db[speaker] = result[speaker]
-        self.result = result
-        self._db.close()
+        db.close()
         self._instance_memoize__cache = {}
         
     def close(self):
@@ -155,7 +154,6 @@ class IFAFormantsMeasure(object):
                         vowel,
                         speaker
                         ):
-        
         return self._db[speaker][vowel].shape[0]
     
     def formants(self,
@@ -237,7 +235,7 @@ class IFAFormantsMeasure(object):
                 speakers = self.females
             else: # males
                 speakers = self.males
-        if not all(s in self.speakers for s in speakers):
+        elif not all(s in self.speakers for s in speakers):
             raise ValueError, 'speakers must be subset of [%s]' % ', '.join(self.speakers)
         
         
