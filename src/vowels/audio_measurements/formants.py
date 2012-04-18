@@ -20,6 +20,7 @@ vowels.audio_measurements.formants:
 extract formants from sound files
 '''
 from bisect import bisect_left
+import hashlib
 
 import numpy as np
 import os
@@ -75,7 +76,8 @@ class IFAFormantsMeasure(object):
         self.verbose=verbose
         
         if db_name is None:
-            self._db_name = os.path.join(cfg_dumpdir, 'formant_db')
+            hex = hashlib.sha224(str(self._edge_margin) + str(self._winlen) + str(self._preemph)).hexdigest()
+            self._db_name = os.path.join(cfg_dumpdir, 'formant_db_%s' % hex)
         else:
             self._db_name = db_name
         if force_rebuild:

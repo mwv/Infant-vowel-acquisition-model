@@ -22,6 +22,7 @@ vowels.audio_measurements.mfcc:
 import re
 import os
 import shelve
+import hashlib
 
 import numpy as np
 
@@ -42,7 +43,7 @@ class MFCCError(Exception):
 
 class MFCCMeasure(object):
     def __init__(self,
-                 nframes=23,
+                 nframes=45,
                  spectral_front_end=None,
                  init_alloc=10000,
                  db_name=None,
@@ -61,7 +62,8 @@ class MFCCMeasure(object):
         self.males = ifa.male_speakers()
         self.vowels = vowels_sampa
         if db_name is None:
-            self._db_name = os.path.join(cfg_dumpdir, 'mfcc_db')
+            hex = hashlib.sha224(str(self._nframes) + '_'.join(map(str, self._spectral_front_end.config().values()))).hexdigest()
+            self._db_name = os.path.join(cfg_dumpdir, 'mfcc_db_%s' % hex)
         else:
             self._db_name = db_name
         if force_rebuild:
@@ -72,8 +74,6 @@ class MFCCMeasure(object):
             self._build_db()
             
         self._make_nobs()
-            
-
         
     def _make_nobs(self):
         if self.verbose:

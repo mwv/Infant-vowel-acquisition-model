@@ -1,13 +1,16 @@
-#Tue Apr 17 03:02:03 CEST 2012
+#Wed Apr 18 00:34:22 CEST 2012
 eclipse.preferences.version=1
 encoding//src/formant_extractor.py=utf-8
 encoding//src/frequency_extractor.py=utf-8
 encoding//src/main.py=utf-8
+encoding//src/manifold_comparison.py=utf-8
 encoding//src/vowels/audio_measurements/formants.py=utf-8
 encoding//src/vowels/audio_measurements/lda.py=utf-8
 encoding//src/vowels/audio_measurements/mfcc.py=utf-8
 encoding//src/vowels/audio_measurements/praat_interact.py=utf-8
 encoding//src/vowels/audio_measurements/spectral.py=utf-8
+encoding//src/vowels/clustering/manifold.py=utf-8
+encoding//src/vowels/clustering/overlap.py=utf-8
 encoding//src/vowels/config/paths.py=utf-8
 encoding//src/vowels/data_collection/celex.py=utf-8
 encoding//src/vowels/data_collection/childes.py=utf-8
