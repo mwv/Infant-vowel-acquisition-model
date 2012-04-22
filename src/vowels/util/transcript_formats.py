@@ -87,10 +87,7 @@ def sampa_to_disc(p):
         raise PhoneSymbolError, '%s is not a valid sampa symbol' % p
     
 def sampa_to_unicode(p):
-    try:
-        return _sampa_to_unicode_ipa[p]
-    except KeyError:
-        raise PhoneSymbolError, '%s is not a valid sampa vowel' % p
+    return _sampa_to_unicode_ipa[p]
     
     
 # (vowels only) unicode character codes
@@ -99,7 +96,6 @@ _sampa_to_unicode_ipa = bidict({
 'y:':'y',
 'e:':'e',
 '|:':ur'\u00F8',
-'2':ur'\u00F8',
 'a:':ur'a',
 'o:':'o:',
 'u:':'u',
@@ -116,7 +112,26 @@ _sampa_to_unicode_ipa = bidict({
 'EI':ur'\u025Bi',
 '/I':ur'\u0153\u028F',
 'Au':ur'\u0251\u028A'})
-
+                               
+#'A':ur'\u0251',
+#'{':ur'\u00E6',
+#'6':ur'\u0250',
+#'Q':ur'\u0252',
+#'E':ur'\u025B',
+#'@':ur'\u0259',
+#'3':ur'\u025C',
+#'I':ur'\u026A',
+#'O':ur'\u0254',
+#'2':ur'\u00F8',
+#'9':ur'\u0153',
+#'&':ur'\u0276',
+#'U':ur'\u028A',
+#'}':ur'\u0289',
+#'V':ur'\u028C',
+#'Y':ur'\u028F',
+#'B':ur'\u03B2',
+#'C':ur'\u00E7',
+#'D':ur'\u00F0'})
                     
 
 _sampa_to_cgn = bidict({
@@ -168,77 +183,6 @@ _sampa_to_cgn = bidict({
 'O~' : 'O~',
 'Y~' : 'Y~'
 })
-
-_sampa_injection_map = {
-'i:':'i:',
-'y:':'y:',
-'e:':'e:',
-'|:':'|:', 
-'a:':'a:',
-'u:':'u:',
-'I':'I',
-'E':'E',
-'A':'A',
-'O':'O',
-'}':'}',
-'@':'@',
-'i::':'i:',
-'y::':'y:',
-'E:':'E',
-'/:':'|:',
-'Q:':'O',
-'EI':'EI',
-'/I':'/I',
-'Au':'Au',
-'{':'E',
-'6':'@',
-'2':'|:',
-'9':'}',
-'U':'u:',
-'V':'A',
-'Y':'y:',
-'E~':'E',
-'A~':'A',
-'O~':'O',
-'Y~':'}',
-'A+':'Au'}
-                        
-
-_sampa_to_htk_vowels = {
-'i:':'i', # liep
-'y:':'y', # buut
-'e:':'e', # leeg
-'|:':'eu', # deuk
-'a:':'a', # laat
-'o:':'o', # boom
-'u:':'u', # boek
-'I':'ic', # lip
-'E':'ec', # leg
-'A':'ac', # lat
-'O':'oc', # bom
-'}':'yc', # put
-'@':'@', # schwa
-'i::':'i', # analyse
-'y::':'y', # centrifuge
-'E:':'ec', # scene (fr)
-'/:':'eu', # freule (fr)
-'Q:':'oc', # zone (fr)
-'EI':'ei', # wijs
-'/I':'ui', # huis
-'Au':'au', # koud
-'{':'ec', # trap (eng)
-'6':'@', # open schwa
-'2':'eu', # deux (fr)
-'9':'yc', # neuf (fr)
-'U':'u', # foot (eng)
-'V':'ac', # strut (eng)
-'Y':'y', # huebsch (de)
-'E~':'ec', # vacc_in_ (fr)
-'A~':'ac', # cross_ant_ (fr)
-'O~':'oc', # conge (fr)
-'Y~':'yc', # parf_um_ (fr)
-'A+':'au'}
-
 
 _disc_to_sampa = bidict({
     ' ':' ',
