@@ -43,13 +43,14 @@ class LDA(object):
         Leaving out check for sample size match between X and y, since LDA does that for us.
         """
         nsamples, nframes, ncepstra = samples.shape
-        samples = np.resize(nsamples, nframes*ncepstra)
+        samples = np.resize(samples,(nsamples, nframes*ncepstra))
         
         # build label map
         label_set = sorted(list(set(labels)))
         self._label_map = bidict(zip(range(len(label_set)), label_set))
 
         self.lda.fit(samples, map(lambda x:self._label_map[:x], labels))
+        return self
 
     def transform(self, samples):
         nsamples, nframes, ncepstra = samples.shape
