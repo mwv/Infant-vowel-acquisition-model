@@ -89,7 +89,6 @@ def sampa_to_disc(p):
 def sampa_to_unicode(p):
     return _sampa_to_unicode_ipa[p]
     
-    
 # (vowels only) unicode character codes
 _sampa_to_unicode_ipa = bidict({
 'i:':'i',
@@ -112,27 +111,7 @@ _sampa_to_unicode_ipa = bidict({
 'EI':ur'\u025Bi',
 '/I':ur'\u0153\u028F',
 'Au':ur'\u0251\u028A'})
-                               
-#'A':ur'\u0251',
-#'{':ur'\u00E6',
-#'6':ur'\u0250',
-#'Q':ur'\u0252',
-#'E':ur'\u025B',
-#'@':ur'\u0259',
-#'3':ur'\u025C',
-#'I':ur'\u026A',
-#'O':ur'\u0254',
-#'2':ur'\u00F8',
-#'9':ur'\u0153',
-#'&':ur'\u0276',
-#'U':ur'\u028A',
-#'}':ur'\u0289',
-#'V':ur'\u028C',
-#'Y':ur'\u028F',
-#'B':ur'\u03B2',
-#'C':ur'\u00E7',
-#'D':ur'\u00F0'})
-                    
+                 
 
 _sampa_to_cgn = bidict({
 ' ' : ' ',                       
