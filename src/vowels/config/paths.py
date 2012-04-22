@@ -36,5 +36,10 @@ if not os.path.exists(cfg_dumpdir):
 cfg_figdir = os.path.join(cfg_datadir, 'figs')
 if not os.path.exists(cfg_figdir):
     os.makedirs(cfg_figdir)
+    
+cfg_cgndir = os.path.join(cfg_datadir, 'cgn')
+cfg_cgnmlfdir = os.path.join(cfg_cgndir, 'mlf')
+cfg_cgntgdir = os.path.join(cfg_cgndir, 'textgrids')
+cfg_cgnwavdir = os.path.join(cfg_cgndir, 'wavs')
 
 
