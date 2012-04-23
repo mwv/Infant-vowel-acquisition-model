@@ -56,6 +56,8 @@ vowels_sampa = set(
                 'O~', # c_o_nge (fr)
                 'Y~']) # parf_um_ (fr)
 
+vowels_sampa_merged = set(map(lambda x:_sampa_injection_map[x], vowels_sampa))
+
 class PhoneSymbolError(Exception):
     def __init__(self, value):
         self.value = value
@@ -111,7 +113,96 @@ _sampa_to_unicode_ipa = bidict({
 'EI':ur'\u025Bi',
 '/I':ur'\u0153\u028F',
 'Au':ur'\u0251\u028A'})
-                 
+   
+   
+_sampa_injection_map = {
+'i:':'i:',
+'y:':'y:',
+'e:':'e:',
+'|:':'|:', 
+'a:':'a:',
+'u:':'u:',
+'I':'I',
+'E':'E',
+'A':'A',
+'O':'O',
+'}':'}',
+'@':'@',
+'i::':'i:',
+'y::':'y:',
+'E:':'E',
+'/:':'|:',
+'Q:':'O',
+'EI':'EI',
+'/I':'/I',
+'Au':'Au',
+'{':'E',
+'6':'@',
+'2':'|:',
+'9':'}',
+'U':'u:',
+'V':'A',
+'Y':'y:',
+'E~':'E',
+'A~':'A',
+'O~':'O',
+'Y~':'}',
+'A+':'Au'}
+
+_htk_to_sampa_vowels = {
+'i':'i:',
+'y':'y:',
+'eu':'|:',
+'e':'e:',
+'a':'a:',
+'o':'o:',
+'u':'u:',
+'ic':'I',
+'ec':'E',
+'ac':'A',
+'oc':'O',
+'yc':'}',
+'@':'@',
+'ei':'EI',
+'ui':'/I',
+'au':'Au'}
+
+                        
+
+_sampa_to_htk_vowels = {
+'i:':'i', # liep
+'y:':'y', # buut
+'e:':'e', # leeg
+'|:':'eu', # deuk
+'a:':'a', # laat
+'o:':'o', # boom
+'u:':'u', # boek
+'I':'ic', # lip
+'E':'ec', # leg
+'A':'ac', # lat
+'O':'oc', # bom
+'}':'yc', # put
+'@':'@', # schwa
+'i::':'i', # analyse
+'y::':'y', # centrifuge
+'E:':'ec', # scene (fr)
+'/:':'eu', # freule (fr)
+'Q:':'oc', # zone (fr)
+'EI':'ei', # wijs
+'/I':'ui', # huis
+'Au':'au', # koud
+'{':'ec', # trap (eng)
+'6':'@', # open schwa
+'2':'eu', # deux (fr)
+'9':'yc', # neuf (fr)
+'U':'u', # foot (eng)
+'V':'ac', # strut (eng)
+'Y':'y', # huebsch (de)
+'E~':'ec', # vacc_in_ (fr)
+'A~':'ac', # cross_ant_ (fr)
+'O~':'oc', # conge (fr)
+'Y~':'yc', # parf_um_ (fr)
+'A+':'au'}              
 
 _sampa_to_cgn = bidict({
 ' ' : ' ',                       
