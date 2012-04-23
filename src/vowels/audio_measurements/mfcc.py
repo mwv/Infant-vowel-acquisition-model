@@ -29,10 +29,10 @@ import numpy as np
 import scikits.audiolab
 import scikits.samplerate
 
-from ..config.paths import cfg_dumpdir, cfg_ifadir
-from ..data_collection import ifa
-from ..util.transcript_formats import vowels_sampa, cgn_to_sampa
-from ..util.decorators import memoize, instance_memoize
+from ..config.paths import cfg_dumpdir
+
+from ..util.transcript_formats import vowels_sampa, cgn_to_sampa, sampa_merge, vowels_sampa_merged
+from ..util.decorators import instance_memoize
 from .spectral import MFCC
 
 class MFCCError(Exception):
@@ -43,6 +43,8 @@ class MFCCError(Exception):
 
 class MFCCMeasure(object):
     def __init__(self,
+                 corpus,
+                 merge_vowels=True,
                  nframes=45,
                  spectral_front_end=None,
                  init_alloc=10000,
@@ -54,16 +56,22 @@ class MFCCMeasure(object):
             self._spectral_front_end = MFCC()
         else:
             self._spectral_front_end = spectral_front_end
+        self.corpus = corpus
+        self.merge_vowels=merge_vowels
         self._nframes=nframes
         self._init_alloc = init_alloc
         self.verbose=verbose
-        self.speakers = ifa.valid_speakers()
-        self.females = ifa.female_speakers()
-        self.males = ifa.male_speakers()
-        self.vowels = vowels_sampa
+        if merge_vowels:
+            self.vowels = vowels_sampa_merged
+        else:
+            self.vowels = vowels_sampa
         if db_name is None:
-            hex = hashlib.sha224(str(self._nframes) + '_'.join(map(str, self._spectral_front_end.config().values()))).hexdigest()
-            self._db_name = os.path.join(cfg_dumpdir, 'mfcc_db_%s' % hex)
+            hex = hashlib.sha1(str(self._nframes) + 
+                               str(self.merge_vowels) +
+                               str(self.corpus) +  
+                               '_'.join(map(str, self._spectral_front_end.config().values()))).hexdigest()
+            self._db_name = os.path.join(cfg_dumpdir, 'mfcc_db_%s' % (hex))
+            self._nobs_name = os.path.join(cfg_dumpdir, 'mfcc_nobd_%s' % (hex))
         else:
             self._db_name = db_name
         if force_rebuild:
@@ -78,16 +86,22 @@ class MFCCMeasure(object):
     def _make_nobs(self):
         if self.verbose:
             print 'gathering population statistics...',
-        # gather population statistics
-        self._nobs = dict((s, 
-                           dict((v, 0)
-                                for v in self.vowels))
-                            for s in self.speakers)
-        db = shelve.open(self._db_name)
-        for speaker in self.speakers:
-            for vowel in self.vowels:
-                self._nobs[speaker][vowel] = db[speaker][vowel].shape[0]
-        db.close()        
+        # gather population statistics        
+        db = shelve.open(self._nobs_name)
+        self._nobs = {}
+        for vowel in db:
+            self._nobs[vowel] = db[vowel]
+        db.close()
+
+#        self._nobs = dict((s, 
+#                           dict((v, 0)
+#                                for v in self.vowels))
+#                            for s in self.speakers)
+#        db = shelve.open(self._db_name)
+#        for speaker in self.speakers:
+#            for vowel in self.vowels:
+#                self._nobs[speaker][vowel] = db[speaker][vowel].shape[0]
+#        db.close()        
         if self.verbose:
             print 'done.'
         
@@ -120,35 +134,35 @@ class MFCCMeasure(object):
             raise MFCCError, 'frame selection out of bounds'
         return np.resize(mfcc_matrix[start_idx:end_idx,:], (self._spectral_front_end.ncep * self._nframes,))        
 
-    def population_size(self, speaker, vowel):
-        return self._nobs[speaker][vowel]
+    def population_size(self, vowel):
+        return self._nobs[vowel]
     
     def _build_db(self):
         if self.verbose:
             print 'building database...'
-        corpus = ifa.IFA()
+        corpus = self.corpus
         
-        result = dict((s,
-                       dict((v,
-                             np.empty((self._init_alloc, self._spectral_front_end.ncep * self._nframes)))
-                             for v in self.vowels))
-                        for s in self.speakers)
-        nobs = dict((s,
-                     dict((v, 0)
-                          for v in self.vowels))
-                     for s in self.speakers)
-        
-        for tg in corpus.iter_textgrids():
+        result = dict((v,
+                       np.empty((self._init_alloc, self._spectral_front_end.ncep * self._nframes)))
+                              for v in self.vowels)
+
+        nobs = dict((v, 0)
+                    for v in self.vowels)
+        for (wavname, tg) in corpus.utterances():
+        #for tg in corpus.iter_textgrids():
             basename = tg.name
-            speaker = basename[:4]
-            wavname = os.path.join(cfg_ifadir, 'wavs', speaker, basename+'.wav')
+#            speaker = basename[:4]
+#            wavname = corpus.wavfile(basename)
+            #wavname = os.path.join(cfg_ifadir, 'wavs', speaker, basename+'.wav')
             for phone_interval in tg['phone alignment']:
                 mark = re.sub(r'[\^\d]+$','',phone_interval.mark)
                 try:
                     mark = cgn_to_sampa(mark)
+                    if self.merge_vowels:
+                        mark = sampa_merge(mark)
                 except:
                     continue
-                if mark in vowels_sampa:
+                if mark in self.vowels:
                     interval = (phone_interval.xmin, phone_interval.xmax)
                     if self.verbose:
                         print '%s - %s' % (basename, mark)
@@ -157,17 +171,16 @@ class MFCCMeasure(object):
                         except MFCCError:
                             continue
                         
-                    result[speaker][mark][nobs[speaker][mark]] = vector
-                    nobs[speaker][mark] += 1
+                    result[mark][nobs[mark]] = vector
+                    nobs[mark] += 1
                     
         if self.verbose:
             print 'building database...done.'
         # resize the matrices
         if self.verbose:
             print 'resizing mfcc arrays...'
-        for speaker in result:
-            for vowel in result[speaker]:
-                result[speaker][vowel].resize((nobs[speaker][vowel], self._spectral_front_end.ncep * self._nframes))
+        for vowel in result:
+                result[vowel].resize((nobs[vowel], self._spectral_front_end.ncep * self._nframes))
         if self.verbose:
             print 'done.'
                 
@@ -175,12 +188,17 @@ class MFCCMeasure(object):
         if self.verbose:
             print 'saving results...'
         db = shelve.open(self._db_name)
-        for speaker in result:
-            db[speaker] = result[speaker]
+        for vowel in result:
+            db[vowel] = result[vowel]
+        db.close()
+        
+        db = shelve.open(self._nobs_name)
+        for vowel in nobs:
+            db[vowel] = nobs[vowel]
         db.close()
         if self.verbose:
             print 'done.'
-        
+            
         # clear the memo cache
         if self.verbose:
             print 'clearing cache...'
@@ -188,47 +206,34 @@ class MFCCMeasure(object):
         if self.verbose:
             print 'done.'
         
-    def get_mfcc_frames(self, speaker, vowel):
+    def get_mfcc_frames(self, vowel):
         db = shelve.open(self._db_name)
-        res = db[speaker][vowel]
+        res = db[vowel]
         db.close()
         return res
     
     def sample(self,
                vowels,
-               k=None,
-               speakers=None,
-               gender=None):
+               k=None):
         if not all(v in self.vowels for v in vowels):
             raise ValueError, 'vowels must be subset of [%s]' % ', '.join(self.vowels)
-        if speakers is None:
-            if gender is None:
-                speakers = self.speakers
-            elif gender == 'female':
-                speakers = self.females
-            else:
-                speakers = self.males
-        elif not all(s in self.speakers for s in speakers):
-            raise ValueError, 'speakers must be subset of [%s]' % ', '.join(self.speakers)
-        
+
         nsamples = dict((v,0) for v in vowels)
-        for s in speakers:
-            for v in vowels:
-                nsamples[v] += self.population_size(s, v)
+        for v in vowels:
+            nsamples[v] += self.population_size(v)
         result = dict((v, np.empty((nsamples[v], 
                                     self._spectral_front_end.ncep * self._nframes)))
                         for v in vowels)
         filled = dict((v, 0) for v in vowels)
         db = shelve.open(self._db_name)
-        for s in speakers:
-            for v in vowels:
-                if self.population_size(s, v) == 0:
-                    continue
-                data = db[s][v]
-                start_idx = filled[v]
-                end_idx = start_idx + data.shape[0]
-                result[v][start_idx:end_idx, :] = data
-                filled[v] += data.shape[0]
+        for v in vowels:
+            if self.population_size(v) == 0:
+                continue
+            data = db[v]
+            start_idx = filled[v]
+            end_idx = start_idx + data.shape[0]
+            result[v][start_idx:end_idx, :] = data
+            filled[v] += data.shape[0]
         db.close()
         return result
                 

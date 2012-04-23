@@ -30,10 +30,8 @@ import shelve
 
 from .praat_interact import run_praat
 from ..util.decorators import instance_memoize
-from ..data_collection import ifa
-from ..config.paths import cfg_ifadir, cfg_dumpdir
-from ..data_collection.freq_counter import vowels_sampa
-from ..util.transcript_formats import cgn_to_sampa
+from ..config.paths import cfg_dumpdir
+from ..util.transcript_formats import cgn_to_sampa, vowels_sampa, vowels_sampa_merged, sampa_merge
 from ..util.functions import _float, hertz_to_bark, hertz_to_mel
 
 class FormantError(Exception):
@@ -42,8 +40,10 @@ class FormantError(Exception):
     def __str__(self):
         return self.value
     
-class IFAFormantsMeasure(object):
+class FormantsMeasure(object):
     def __init__(self, 
+                 corpus,
+                 merge_vowels=True,
                  edge_margin=0.05, 
                  init_alloc=10000, 
                  winlen=0.025, 
@@ -51,7 +51,7 @@ class IFAFormantsMeasure(object):
                  db_name=None,
                  force_rebuild=False,
                  verbose=True):
-        """ Wrapper around formant measurements database for the ifa corpus
+        """ Wrapper around formant measurements database 
         
         Arguments:
         - edge_margin: percentage from vowel boundary to measure begin and end slices from
@@ -65,18 +65,21 @@ class IFAFormantsMeasure(object):
         - db_name: name of custom database to use as backend. if not specified, a file is generated in cfg_dumpdir
         - force_rebuild: forces a rebuild of the database, regardless of whether the database exists
         """
+        self.corpus = corpus
+        self.merge_vowels = merge_vowels
         self._edge_margin = edge_margin
         self._init_alloc = init_alloc
         self._winlen = winlen
         self._preemph = preemph
-        self.speakers = ifa.valid_speakers()
-        self.females = ifa.female_speakers()
-        self.males = ifa.male_speakers()
         self.vowels = vowels_sampa
         self.verbose=verbose
         
         if db_name is None:
-            hex = hashlib.sha224(str(self._edge_margin) + str(self._winlen) + str(self._preemph)).hexdigest()
+            hex = hashlib.sha1(str(self.corpus) + 
+                               str(self.merge_vowels) +
+                               str(self._edge_margin) + 
+                               str(self._winlen) + 
+                               str(self._preemph)).hexdigest()
             self._db_name = os.path.join(cfg_dumpdir, 'formant_db_%s' % hex)
         else:
             self._db_name = db_name
@@ -86,35 +89,31 @@ class IFAFormantsMeasure(object):
             self._build_db()        
         if not os.path.exists(self._db_name):
             self._build_db()
-        self._db = shelve.open(self._db_name)
         
     def _build_db(self):
         if self.verbose:
             print 'building database...'
-        corpus = ifa.IFA()
+        corpus = self.corpus
 
-        result = dict((s, 
-                       dict((v, 
-                             np.empty((self._init_alloc,10))) 
-                             for v in self.vowels)) 
-                       for s in self.speakers)
-        nobs = dict((s,
-                     dict((v, 0) 
-                          for v in self.vowels))
-                     for s in self.speakers)
-        for tg in corpus.iter_textgrids():
+        result = dict((v, 
+                       np.empty((self._init_alloc,10))) 
+                       for v in self.vowels) 
+        nobs = dict((v, 0) 
+                    for v in self.vowels)
+        for (wavname, tg) in corpus.utterances():
             basename = tg.name
             female = basename[0] == 'F'
-            speaker = basename[:4]
-            wavname = os.path.join(cfg_ifadir, 'wavs', speaker, basename + '.wav')
             # find the vowel intervals
             for phone_interval in tg['phone alignment']:
                 mark = re.sub(r'[\^\d]+$','', phone_interval.mark)
+                
                 try:
                     mark = cgn_to_sampa(mark)
+                    if self.merge_vowels:
+                        mark = sampa_merge(mark)
                 except:
                     continue
-                if mark in vowels_sampa:
+                if mark in self.vowels:
                     xmin = phone_interval.xmin
                     xmax = phone_interval.xmax
                     # pick 3 points
@@ -133,35 +132,27 @@ class IFAFormantsMeasure(object):
                         continue
     
                     vector = np.hstack((begin, middle, end, np.array(delta)))
-                    result[speaker][mark][nobs[speaker][mark]] = vector
-                    nobs[speaker][mark] += 1
+                    result[mark][nobs[mark]] = vector
+                    nobs[mark] += 1
         # resize the matrices
-        for speaker in result:
-            for vowel in result[speaker]:
-                result[speaker][vowel].resize((nobs[speaker][vowel],10))
+        for vowel in result:
+            result[vowel].resize((nobs[vowel],10))
         # save the results in the database
         db =  shelve.open(self._db_name)                
-        for speaker in result:
-            self._db[speaker] = result[speaker]
+        for vowel in result:
+            self._db[vowel] = result[vowel]
         db.close()
         self._instance_memoize__cache = {}
         
-    def close(self):
-        self._db.close()
-        
-    def __del__(self):
-        self._db.close()
-                      
+                     
     def population_size(self,
-                        vowel,
-                        speaker
-                        ):
-        return self._db[speaker][vowel].shape[0]
+                        vowel):
+        return self._db[vowel].shape[0]
     
     def formants(self,
                  vowel,
-                 speaker):
-        """returns all measurements for specified vowel and speaker
+                 ):
+        """returns all measurements for specified vowel
         
         measurements are laid out in a 10-dimensional array as follows:
         0 : F1_begin 
@@ -175,7 +166,10 @@ class IFAFormantsMeasure(object):
         8 : F3_end
         9 : duration        
         """
-        return self._db[speaker][vowel]
+        db = shelve.open(self._db_name)
+        res = db[vowel]
+        db.close()
+        return db
     
     @instance_memoize
     def _forms_from(self, filename, maxformant=5500):
@@ -210,8 +204,6 @@ class IFAFormantsMeasure(object):
                vowels, 
                features=None, # not implemented yet
                k=None,
-               speakers=None, 
-               gender=None, 
                scale='hertz', 
                exclude_outliers=False, # not implemented yet
                percentile=99.9): # not implemented yet
@@ -230,35 +222,27 @@ class IFAFormantsMeasure(object):
         """
         if not all(v in self.vowels for v in vowels):
             raise ValueError, 'vowels must be subset of [%s]' % ', '.join(self.vowels)
-        if speakers is None:
-            if gender is None:
-                speakers = self.speakers
-            elif gender == 'female':
-                speakers = self.females
-            else: # males
-                speakers = self.males
-        elif not all(s in self.speakers for s in speakers):
-            raise ValueError, 'speakers must be subset of [%s]' % ', '.join(self.speakers)
-        
+
         
         # figure out how many samples we're gonna see per vowel
         nsamples = dict((v,0) for v in vowels)   
-        for s in speakers:
-            for v in vowels:
-                nsamples[v] += self.population_size(v, s)
+        for v in vowels:
+            nsamples[v] += self.population_size(v)
         result = dict((v, np.empty((nsamples[v],10))) for v in vowels)
         filled = dict((v,0) for v in vowels)
-        for s in speakers:
-            for n in range(len(vowels)):
-                if self.population_size(vowels[n], s) == 0:
-                    continue
-                data = self._db[s][vowels[n]]
-                if scale == 'bark':
-                    data[:,:10] = hertz_to_bark(data[:,:10])
-                elif scale == 'mel':
-                    data[:,:10] = hertz_to_mel(data[:,:10])
-                start_idx = filled[vowels[n]]
-                end_idx = start_idx + data.shape[0]
-                result[vowels[n]][start_idx:end_idx, :] = data
-                filled[vowels[n]] += data.shape[0]
+
+        db = shelve.open(self._db_name)
+        for n in range(len(vowels)):
+            if self.population_size(vowels[n]) == 0:
+                continue
+            data = db[vowels[n]]
+            if scale == 'bark':
+                data[:,:10] = hertz_to_bark(data[:,:10])
+            elif scale == 'mel':
+                data[:,:10] = hertz_to_mel(data[:,:10])
+            start_idx = filled[vowels[n]]
+            end_idx = start_idx + data.shape[0]
+            result[vowels[n]][start_idx:end_idx, :] = data
+            filled[vowels[n]] += data.shape[0]
+        db.close()
         return result
