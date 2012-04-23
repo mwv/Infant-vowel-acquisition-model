@@ -27,6 +27,7 @@ import os
 import re
 import cPickle
 import shelve
+import random
 
 from .praat_interact import run_praat
 from ..util.decorators import instance_memoize
@@ -147,7 +148,10 @@ class FormantsMeasure(object):
                      
     def population_size(self,
                         vowel):
-        return self._db[vowel].shape[0]
+        db = shelve.open(self._db_name)
+        res = db[vowel].shape[0]
+        db.close()
+        return res
     
     def formants(self,
                  vowel,
@@ -228,7 +232,11 @@ class FormantsMeasure(object):
         nsamples = dict((v,0) for v in vowels)   
         for v in vowels:
             nsamples[v] += self.population_size(v)
-        result = dict((v, np.empty((nsamples[v],10))) for v in vowels)
+        min_nsamples = min(nsamples.values())
+        if k is None or k > min_nsamples:
+            k = min_nsamples    
+        
+        result = dict((v, np.empty((k,10))) for v in vowels)
         filled = dict((v,0) for v in vowels)
 
         db = shelve.open(self._db_name)
@@ -236,6 +244,8 @@ class FormantsMeasure(object):
             if self.population_size(vowels[n]) == 0:
                 continue
             data = db[vowels[n]]
+            sample_idcs = random.sample(range(data.shape[0]), k)
+            data = data[sample_idcs,:]
             if scale == 'bark':
                 data[:,:10] = hertz_to_bark(data[:,:10])
             elif scale == 'mel':

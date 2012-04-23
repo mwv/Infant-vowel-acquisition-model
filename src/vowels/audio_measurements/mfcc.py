@@ -23,7 +23,7 @@ import re
 import os
 import shelve
 import hashlib
-
+import random
 import numpy as np
 
 import scikits.audiolab
@@ -218,10 +218,15 @@ class MFCCMeasure(object):
         if not all(v in self.vowels for v in vowels):
             raise ValueError, 'vowels must be subset of [%s]' % ', '.join(self.vowels)
 
+        
         nsamples = dict((v,0) for v in vowels)
         for v in vowels:
             nsamples[v] += self.population_size(v)
-        result = dict((v, np.empty((nsamples[v], 
+            
+        min_nsamples = min(nsamples.values())
+        if k is None or k > min_nsamples:
+            k = min_nsamples
+        result = dict((v, np.empty((k, 
                                     self._spectral_front_end.ncep * self._nframes)))
                         for v in vowels)
         filled = dict((v, 0) for v in vowels)
@@ -230,6 +235,8 @@ class MFCCMeasure(object):
             if self.population_size(v) == 0:
                 continue
             data = db[v]
+            sample_idcs = random.sample(range(data.shape[0]), k)
+            data = data[sample_idcs,:]
             start_idx = filled[v]
             end_idx = start_idx + data.shape[0]
             result[v][start_idx:end_idx, :] = data
