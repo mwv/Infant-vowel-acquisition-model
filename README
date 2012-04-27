@@ -9,7 +9,20 @@ Licensed under GPLv3
 Extract frequency and acoustic similarity information from infant- and adult-directed speech.
 
 To run the example for extracting frequency counts I sent around:
-- make sure you have python2.7 installed
+- make sure you have python2.7+ installed
 - install bidict from pypi (http://pypi.python.org/pypi/bidict/0.1.1) if you haven't already
 - set up your file paths as outlined in CORPUS_FILE_STRUCTURE_LAYOUT
 - run frequency_extractor.py script in /src directory
+
+To use any of the audio measurement, clustering or classification functions, make sure you have the following:
+- numpy and scipy (http://numpy.scipy.org/), linear algebra functions and scientific computing libraries
+- matplotlib (http://matplotlib.sourceforge.net/), plotting library
+- sklearn (http://scikit-learn.org/), machine learning library
+- for the formant measurements, I've used Praat. Make sure that python can call it, i.e. 'praat' should be in your PATH.
+  (For OSX: the Praat program installs to /Applications/Audio/Praat.app/Contents/MacOS/Praat, which is not in the PATH by default.
+    Easiest way to solve that is to put a symlink in /usr/bin to there, i.e. open a Terminal and do
+    $ sudo ln -s /Applications/Audio/Praat.app/Contents/MacOS/Praat /usr/bin/praat 
+   For Linux: Praat installs to /usr/bin by default, so you don't have to do anything.
+   For Windows: god knows.)
+    
+
