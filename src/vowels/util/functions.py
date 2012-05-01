@@ -41,3 +41,13 @@ def _float(s):
         return float(s)
     except ValueError:
         return np.nan
+    
+#functional programming tools
+
+def compose(f1, f2):
+    if not callable(f1) or not callable(f2):
+        raise TypeError("Arguments must be callable")
+    
+    def c(*args, **kwargs):
+        return f1(f2(*args, **kwargs))
+    return c
