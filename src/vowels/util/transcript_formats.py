@@ -47,7 +47,6 @@ vowels_sampa = set(
                 '3', # nurse (eng)
                 '2', # deux (fr)
                 '9', # neuf (fr)
-                '&', # open front rounded
                 'U', # foot (eng)
                 'V', # strut (eng)
                 'Y', # huebsch (de)
@@ -56,7 +55,7 @@ vowels_sampa = set(
                 'O~', # c_o_nge (fr)
                 'Y~']) # parf_um_ (fr)
 
-vowels_sampa_merged = set(map(lambda x:_sampa_injection_map[x], vowels_sampa))
+
 
 class PhoneSymbolError(Exception):
     def __init__(self, value):
@@ -74,7 +73,8 @@ def cgn_to_sampa(p):
     try:
         return _sampa_to_cgn[:p]
     except KeyError:
-        raise PhoneSymbolError, '%s is not a valid cgn symbol' % p
+        return p
+        #raise PhoneSymbolError, '%s is not a valid cgn symbol' % p
 
 def disc_to_sampa(p):
     try:
@@ -87,6 +87,18 @@ def sampa_to_disc(p):
         return _disc_to_sampa[:p]
     except KeyError:
         raise PhoneSymbolError, '%s is not a valid sampa symbol' % p
+    
+def sampa_merge(p):
+    try:
+        return _sampa_injection_map[p]
+    except KeyError:
+        return p   
+    
+def htk_to_sampa(p):
+    try:
+        return _htk_to_sampa_vowels[p]
+    except KeyError:
+        return p 
     
 def sampa_to_unicode(p):
     return _sampa_to_unicode_ipa[p]
@@ -114,13 +126,13 @@ _sampa_to_unicode_ipa = bidict({
 '/I':ur'\u0153\u028F',
 'Au':ur'\u0251\u028A'})
    
-   
 _sampa_injection_map = {
 'i:':'i:',
 'y:':'y:',
 'e:':'e:',
 '|:':'|:', 
 'a:':'a:',
+'o:':'o:',
 'u:':'u:',
 'I':'I',
 'E':'E',
@@ -139,6 +151,7 @@ _sampa_injection_map = {
 '{':'E',
 '6':'@',
 '2':'|:',
+'3':'}',
 '9':'}',
 'U':'u:',
 'V':'A',
@@ -148,6 +161,8 @@ _sampa_injection_map = {
 'O~':'O',
 'Y~':'}',
 'A+':'Au'}
+
+vowels_sampa_merged = set(map(lambda x:_sampa_injection_map[x], vowels_sampa))
 
 _htk_to_sampa_vowels = {
 'i':'i:',
@@ -166,8 +181,6 @@ _htk_to_sampa_vowels = {
 'ei':'EI',
 'ui':'/I',
 'au':'Au'}
-
-                        
 
 _sampa_to_htk_vowels = {
 'i:':'i', # liep
@@ -339,5 +352,3 @@ _disc_to_sampa = bidict({
     "'":"\"",
     "\"":'%',
     '.':'.'})
-
-
