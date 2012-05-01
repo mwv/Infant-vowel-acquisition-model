@@ -25,7 +25,6 @@ import hashlib
 import numpy as np
 import os
 import re
-import cPickle
 import shelve
 import random
 
@@ -46,7 +45,7 @@ class FormantsMeasure(object):
                  corpus,
                  merge_vowels=True,
                  edge_margin=0.05, 
-                 init_alloc=10000, 
+                 init_alloc=200000, 
                  winlen=0.025, 
                  preemph=50, 
                  db_name=None,
@@ -72,7 +71,10 @@ class FormantsMeasure(object):
         self._init_alloc = init_alloc
         self._winlen = winlen
         self._preemph = preemph
-        self.vowels = vowels_sampa
+        if self.merge_vowels:
+            self.vowels = vowels_sampa_merged
+        else:
+            self.vowels = vowels_sampa
         self.verbose=verbose
         
         if db_name is None:
@@ -90,6 +92,16 @@ class FormantsMeasure(object):
             self._build_db()        
         if not os.path.exists(self._db_name):
             self._build_db()
+            
+    def info(self):
+        db = shelve.open(self._db_name)
+        print '-'*10
+        print 'Vowel:\tN'
+        print '-'*10
+        for v in db:
+            print v, '\t', db[v].shape[0]
+        print '-'*10
+        db.close()
         
     def _build_db(self):
         if self.verbose:
@@ -102,18 +114,21 @@ class FormantsMeasure(object):
         nobs = dict((v, 0) 
                     for v in self.vowels)
         for (wavname, tg) in corpus.utterances():
+        #for el in corpus.utterances():
+#            print el
+#            wavname, tg = el
             basename = tg.name
-            female = basename[0] == 'F'
+            female = basename[0] == 'F' or basename[0] == 'f'
             # find the vowel intervals
             for phone_interval in tg['phone alignment']:
-                mark = re.sub(r'[\^\d]+$','', phone_interval.mark)
+                mark = phone_interval.mark
                 
-                try:
-                    mark = cgn_to_sampa(mark)
-                    if self.merge_vowels:
-                        mark = sampa_merge(mark)
-                except:
-                    continue
+#                try:
+#                    mark = cgn_to_sampa(mark)
+#                    if self.merge_vowels:
+#                        mark = sampa_merge(mark)
+#                except:
+#                    continue
                 if mark in self.vowels:
                     xmin = phone_interval.xmin
                     xmax = phone_interval.xmax
@@ -141,7 +156,7 @@ class FormantsMeasure(object):
         # save the results in the database
         db =  shelve.open(self._db_name)                
         for vowel in result:
-            self._db[vowel] = result[vowel]
+            db[vowel] = result[vowel]
         db.close()
         self._instance_memoize__cache = {}
         
@@ -173,7 +188,7 @@ class FormantsMeasure(object):
         db = shelve.open(self._db_name)
         res = db[vowel]
         db.close()
-        return db
+        return res
     
     @instance_memoize
     def _forms_from(self, filename, maxformant=5500):
@@ -206,6 +221,7 @@ class FormantsMeasure(object):
         
     def sample(self, 
                vowels, 
+               equal_samples=True, # equal number of samples per vowel
                features=None, # not implemented yet
                k=None,
                scale='hertz', 
@@ -233,10 +249,13 @@ class FormantsMeasure(object):
         for v in vowels:
             nsamples[v] += self.population_size(v)
         min_nsamples = min(nsamples.values())
-        if k is None or k > min_nsamples:
+        if k is None or (k > min_nsamples):
             k = min_nsamples    
         
-        result = dict((v, np.empty((k,10))) for v in vowels)
+        if equal_samples:
+            result = dict((v, np.empty((k,10))) for v in vowels)
+        else:
+            result = dict((v, np.empty((nsamples[v],10))) for v in vowels)
         filled = dict((v,0) for v in vowels)
 
         db = shelve.open(self._db_name)
@@ -244,8 +263,9 @@ class FormantsMeasure(object):
             if self.population_size(vowels[n]) == 0:
                 continue
             data = db[vowels[n]]
-            sample_idcs = random.sample(range(data.shape[0]), k)
-            data = data[sample_idcs,:]
+            if equal_samples:
+                sample_idcs = random.sample(range(data.shape[0]), k)
+                data = data[sample_idcs,:]
             if scale == 'bark':
                 data[:,:10] = hertz_to_bark(data[:,:10])
             elif scale == 'mel':
