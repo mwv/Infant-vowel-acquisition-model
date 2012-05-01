@@ -35,11 +35,12 @@ import numpy as np
 import scipy.stats as stats
 
 
-import vowels.data_collection.ifa as ifa
+import vowels.speechcorpora.ifa as ifa
+import vowels.speechcorpora.cgn as cgn
+from vowels.speechcorpora.corpus import MergedCorpus
 import vowels.config.paths as paths
 from vowels.util.transcript_formats import vowels_sampa, sampa_to_unicode
 from vowels.config.paths import cfg_figdir
-from vowels.util.functions import hertz_to_bark, hertz_to_mel
 import vowels.audio_measurements.formants as formants
 
 def plot_vowels(outfiletag, 
@@ -57,9 +58,13 @@ def plot_vowels(outfiletag,
     if not scale in allowed_scales:
         raise ValueError, 'scale must be one of [%s]' % ', '.join(allowed_scales)
 
-    fm = formants.IFAFormantsMeasure()
-    forms = fm.sample(vowels, speakers=speakers, scale='hertz')
-    fm.close()
+    cgn_corpus = cgn.CGN()
+    ifa_corpus = ifa.IFA()
+    corpus = MergedCorpus([ifa_corpus, cgn_corpus])
+    #corpus = MergedCorpus([ifa_corpus])
+    fm = formants.FormantsMeasure(corpus)
+    fm.info()
+    forms = fm.sample(vowels, equal_samples=True,scale='hertz')
     
     vowels = filter(lambda x:forms[x].shape[0] >= minsamples, vowels)    
     # plot the static F1, F2
@@ -111,24 +116,27 @@ def plot_vowels(outfiletag,
         if verbose:
             print 'vowel: %s\tobserved: %d\t sample mean (f1,f2): (%.3f,%.3f)' % (vowels[n], f2.shape[0], f1_mean, f2_mean) 
     
-    nsamples = min(map(lambda x:x.shape[0], xs))
+    #nsamples = min(map(lambda x:x.shape[0], xs))
     
     for n in range(len(vowels)):
-        sample_ids = random.sample(range(xs[n].shape[0]), nsamples)
-        xs_loc = xs[n][sample_ids,:]
-        ys_loc = ys[n][sample_ids,:]
-        print 'samplesize for %s: %d' % (vowels[n],xs_loc.shape[0])
+        #sample_ids = random.sample(range(xs[n].shape[0]), nsamples)
+#        xs_loc = xs[n][sample_ids,:]
+#        ys_loc = ys[n][sample_ids,:]
+        xs_loc = xs[n]
+        ys_loc = ys[n]
+        #print 'samplesize for %s: %d' % (vowels[n],xs_loc.shape[0])
         plt.scatter(xs_loc, ys_loc,
                     color=colors[n % len(colors)], 
                     label=ur'$\mathrm{%s}$' % sampa_to_unicode(vowels[n]), 
                     alpha=0.2)
+    for n in range(len(vowels)):
         
         plt.scatter(means[vowels[n]][1], means[vowels[n]][0], 
                     s=80,
                     color='k',
                     marker=ur'$\mathrm{%s}$' % sampa_to_unicode(vowels[n]))
         
-    print means
+    #print means
         
     plt.xlim(max_x+100, min_x-100)
     plt.ylim(max_y+100, min_y-100)
@@ -141,10 +149,13 @@ def plot_vowels(outfiletag,
     plt.savefig(os.path.join(cfg_figdir, outfiletag+'.png'))
     
 if __name__ == '__main__':
-    plot_vowels('vowel_triangle_new',
+    plot_vowels('vowel_square_formants',
                 scale='linear',
-                vowels=['I','E','}'],
-                percentile=98,
+                vowels=['I', # lip
+                        'e:', # leeg
+                        '|:', # deuk 
+                        '}'], # put
+                percentile=95,
                 speakers=None)
 
                 
