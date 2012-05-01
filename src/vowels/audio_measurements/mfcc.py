@@ -31,7 +31,7 @@ import scikits.samplerate
 
 from ..config.paths import cfg_dumpdir
 
-from ..util.transcript_formats import vowels_sampa, cgn_to_sampa, sampa_merge, vowels_sampa_merged
+from ..util.transcript_formats import vowels_sampa, vowels_sampa_merged
 from ..util.decorators import instance_memoize
 from .spectral import MFCC
 
@@ -45,12 +45,12 @@ class MFCCMeasure(object):
     def __init__(self,
                  corpus,
                  merge_vowels=True,
-                 nframes=45,
+                 nframes=23,
                  spectral_front_end=None,
-                 init_alloc=10000,
+                 init_alloc=200000,
                  db_name=None,
                  force_rebuild=False,
-                 verbose=True
+                 verbose=False
                  ):
         if spectral_front_end is None:
             self._spectral_front_end = MFCC()
@@ -71,7 +71,7 @@ class MFCCMeasure(object):
                                str(self.corpus) +  
                                '_'.join(map(str, self._spectral_front_end.config().values()))).hexdigest()
             self._db_name = os.path.join(cfg_dumpdir, 'mfcc_db_%s' % (hex))
-            self._nobs_name = os.path.join(cfg_dumpdir, 'mfcc_nobd_%s' % (hex))
+            self._nobs_name = os.path.join(cfg_dumpdir, 'mfcc_nobs_%s' % (hex))
         else:
             self._db_name = db_name
         if force_rebuild:
@@ -108,7 +108,7 @@ class MFCCMeasure(object):
     def _read_wav(self, filename):
         """returns mfcc matrix of the specified audio file
         """
-        wave, filefs, enc = scikits.audiolab.wavread(filename)
+        wave, filefs, _ = scikits.audiolab.wavread(filename)
         if self._spectral_front_end.fs != filefs:
             wave = scikits.samplerate.resample(wave, self._spectral_front_end.fs / filefs, 'sinc_best')
         return wave
@@ -155,13 +155,14 @@ class MFCCMeasure(object):
 #            wavname = corpus.wavfile(basename)
             #wavname = os.path.join(cfg_ifadir, 'wavs', speaker, basename+'.wav')
             for phone_interval in tg['phone alignment']:
-                mark = re.sub(r'[\^\d]+$','',phone_interval.mark)
-                try:
-                    mark = cgn_to_sampa(mark)
-                    if self.merge_vowels:
-                        mark = sampa_merge(mark)
-                except:
-                    continue
+                mark = phone_interval.mark
+                #mark = re.sub(r'[\^\d]+$','',phone_interval.mark)
+#                try:
+#                    mark = cgn_to_sampa(mark)
+#                    if self.merge_vowels:
+#                        mark = sampa_merge(mark)
+#                except:
+#                    continue
                 if mark in self.vowels:
                     interval = (phone_interval.xmin, phone_interval.xmax)
                     if self.verbose:
@@ -213,9 +214,11 @@ class MFCCMeasure(object):
         return res
     
     def sample(self,
-               vowels,
+               vowels=None,
                k=None):
-        if not all(v in self.vowels for v in vowels):
+        if vowels is None:
+            vowels = self._nobs.keys()
+        elif not all(v in self.vowels for v in vowels):
             raise ValueError, 'vowels must be subset of [%s]' % ', '.join(self.vowels)
 
         
