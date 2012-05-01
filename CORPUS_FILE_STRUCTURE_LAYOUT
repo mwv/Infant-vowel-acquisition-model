@@ -20,6 +20,9 @@ If you want to run the code without modifying it, you need to set up (symbolic) 
     /BolKuiken
       /.cha files
     ..
+  /cgn
+    /wav
+    /textgrids
 /vowels
   README
   COPYING
