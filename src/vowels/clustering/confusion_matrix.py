@@ -18,7 +18,7 @@ from __future__ import division
 vowels.clustering.confusion_matrix:
 
 '''
-
+ 
 import numpy as np
 from bidict import bidict
 

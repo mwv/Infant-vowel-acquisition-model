@@ -29,6 +29,10 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 
+import vowels.speechcorpora.ifa as ifa
+import vowels.speechcorpora.cgn as cgn
+from vowels.speechcorpora.corpus import MergedCorpus
+
 from sklearn.utils.fixes import qr_economic
 from sklearn import manifold, decomposition, lda, preprocessing
 
@@ -39,7 +43,7 @@ from vowels.config.paths import cfg_figdir
 
 from vowels.util.transcript_formats import vowels_sampa, sampa_to_unicode
 
-vowels = sorted(['e:','E','o:','i:','I','O','}'])
+vowels = sorted(['e:','I','}','|:'])  
 #vowels = sorted(['E','I','}'])
 
 colors = ['b','g','r','c','m','y','k']
@@ -63,17 +67,23 @@ def plot_embedding(X, y, outtag, title=None, alpha=0.6):
     plt.ylim(np.min(X,0)[1]-0.01, np.max(X,0)[1]+0.01)
     plt.savefig(os.path.join(cfg_figdir, outtag))
 
-def get_formant_data():
-    fm = formants.IFAFormantsMeasure()
-    data = fm.sample(vowels, scale='hertz')
-    fm.close()
-    
+def get_formant_data(verbose=True):
+    cgn_corpus=cgn.CGN()
+    ifa_corpus =ifa.IFA()
+    corpus= MergedCorpus([ifa_corpus, cgn_corpus])
+    fm = formants.FormantsMeasure(corpus)
+    data = fm.sample(vowels, equal_samples=True,scale='hertz')
+    if verbose:
+        print 'vowel:\tsamples:'
+        for v in data:
+            print '%6s\t%d' % (v, data[v].shape[0])
     X = np.vstack(data[x] for x in sorted(data.keys()))
     X_scaled = preprocessing.scale(X)
     y = np.hstack(np.ones(data[sorted(data.keys())[x]].shape[0],) * x
                   for x in range(len(data)))
+    
     return X_scaled,y
-
+ 
 def get_mfcc_data():
     mfccm = mfcc.MFCCMeasure()
     data = mfccm.sample(vowels)
@@ -84,7 +94,7 @@ def get_mfcc_data():
     return X_scaled,y    
 
 def random_projection(X,y, tag):
-    n_samples, n_features = X.shape
+    _, n_features = X.shape
     rng = np.random.RandomState(13)
     Q, _ = qr_economic(rng.normal(size=(n_features,2)))
     X_proj = np.dot(Q.T, X.T).T
@@ -123,57 +133,53 @@ def hlle(X, y, tag, n_neighbors=50):
     X_hlle = clf.fit_transform(X, y)
     plot_embedding(X_hlle, y, 'hlle_%s' % tag, title='Hessian Eigenmap Projection: %s' % tag)
     
-
-    
-    
 if __name__ == '__main__':
+    globaltag = 'sq'
+#    print '-'*35
+#    print 'MFCC'
+#    print '-'*35
+#    print 'gathering mfcc data...',
+#    X,y = get_mfcc_data()
+#    print 'done.'
     
-    globaltag = 'all'
-    print '-'*35
-    print 'MFCC'
-    print '-'*35
-    print 'gathering mfcc data...',
-    X,y = get_mfcc_data()
-    print 'done.'
+#    t0 = time()
+#    print 'random projection...',
+#    random_projection(X,y, 'MFCC_all')
+#    print 'done. time %.3fs' % (time() - t0)
     
-    t0 = time()
-    print 'random projection...',
-    random_projection(X,y, 'MFCC_all')
-    print 'done. time %.3fs' % (time() - t0)
+#    t0 = time()
+#    print 'pca projection...',
+#    pca(X,y, 'MFCC_all')
+#    print 'done. time %.3fs' % (time() - t0)
     
-    t0 = time()
-    print 'pca projection...',
-    pca(X,y, 'MFCC_all')
-    print 'done. time %.3fs' % (time() - t0)
+#    t0 =time()
+#    print 'lda projection...',
+#    lda_proj(X,y, 'MFCC_all')
+#    print 'done. time %.3fs' % (time() - t0)
+#    
+#    t0 = time()
+#    print 'isomap...',
+#    isomap(X,y, 'MFCC_all')
+#    print 'done. time %.3fs' % (time() - t0)
     
-    t0 =time()
-    print 'lda projection...',
-    lda_proj(X,y, 'MFCC_all')
-    print 'done. time %.3fs' % (time() - t0)
+#    t0 = time()
+#    print 'locally linear embedding...',
+#    lle(X,y,'MFCC_all')
+#    print 'done. time %.3fs' % (time() - t0)
     
-    t0 = time()
-    print 'isomap...',
-    isomap(X,y, 'MFCC_all')
-    print 'done. time %.3fs' % (time() - t0)
-    
-    t0 = time()
-    print 'locally linear embedding...',
-    lle(X,y,'MFCC_all')
-    print 'done. time %.3fs' % (time() - t0)
-    
-    t0 = time()
-    print 'modified locally linear embedding...',    
-    mlle(X,y,'MFCC_all')
-    print 'done. time %.3fs' % (time() - t0)
-    
-    t0 = time()
-    print 'hessian eigenmapping...',    
-    try:
-        hlle(X,y, 'MFCC_all')
-        print 'done. time %.3fs' % (time() - t0)
-    except:
-        print 'failed.'
-
+#    t0 = time()
+#    print 'modified locally linear embedding...',    
+#    mlle(X,y,'MFCC_all')
+#    print 'done. time %.3fs' % (time() - t0)
+#    
+#    t0 = time()
+#    print 'hessian eigenmapping...',    
+#    try:
+#        hlle(X,y, 'MFCC_all')
+#        print 'done. time %.3fs' % (time() - t0)
+#    except:
+#        print 'failed.'
+#
     print '-'*35
     print 'FORMANTS'
     print '-'*35        
@@ -183,38 +189,38 @@ if __name__ == '__main__':
     
     t0 = time()
     print 'random projection...',
-    random_projection(X,y, 'Formant_all')
+    random_projection(X,y, 'Formant_%s' % globaltag)
     print 'done. time %.3fs' % (time() - t0)
     
     t0 = time()
     print 'pca projection...',
-    pca(X,y, 'Formant_all')
+    pca(X,y, 'Formant_%s' % globaltag)
     print 'done. time %.3fs' % (time() - t0)
     
     t0 =time()
     print 'lda projection...',
-    lda_proj(X,y, 'Formant_all')
+    lda_proj(X,y, 'Formant_%s' % globaltag)
     print 'done. time %.3fs' % (time() - t0)
     
     t0 = time()
     print 'isomap...',
-    isomap(X,y, 'Formant_all')
+    isomap(X,y, 'Formant_%s' % globaltag)
     print 'done. time %.3fs' % (time() - t0)
     
     t0 = time()
     print 'locally linear embedding...',
-    lle(X,y,'Formant_all')
+    lle(X,y,'Formant_%s' % globaltag)
     print 'done. time %.3fs' % (time() - t0)
     
     t0 = time()
     print 'modified locally linear embedding...',    
-    mlle(X,y,'Formant_all')
+    mlle(X,y,'Formant_%s' % globaltag)
     print 'done. time %.3fs' % (time() - t0)
     
     t0 = time()
     print 'hessian eigenmapping...',    
     try:
-        hlle(X,y, 'Formant_all')
+        hlle(X,y, 'Formant_%s' % globaltag)
         print 'done. time %.3fs' % (time() - t0)
     except:
         print 'failed.'        
@@ -223,4 +229,3 @@ if __name__ == '__main__':
 
     
     
-
