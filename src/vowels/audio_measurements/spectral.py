@@ -32,7 +32,7 @@ class MFCC(object):
                  alpha=0.97,            # pre-emphasis coefficient
                  fs=16000,              # sampling rate
                  frate=100,             # 
-                 wlen=0.005,           # window length
+                 wlen=0.01,           # window length
                  nfft=512,              # length of dft
                  mfcc_deltas=False,
                  mfcc_deltasdeltas=False,
