@@ -27,7 +27,6 @@ __date__ = 'Apr 6, 2012'
 import re
 import os
 
-from bidict import bidict
 from ..config.paths import cfg_celexdir
 from ..util.transcript_formats import disc_to_sampa
 
