@@ -93,6 +93,12 @@ class FormantsMeasure(object):
         if not os.path.exists(self._db_name):
             self._build_db()
             
+        self._nobs = {}
+        db = shelve.open(self._db_name)
+        for v in db:
+            self._nobs[v] = db[v].shape[0]
+        db.close()
+            
     def info(self):
         db = shelve.open(self._db_name)
         print '-'*10
