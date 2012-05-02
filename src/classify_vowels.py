@@ -54,15 +54,44 @@ def split_data(X, y, test_proportion=0.25, seed=42):
     test_idx = p[-cut:]
     return DataSet(X[train_idx], y[train_idx], X[test_idx], y[test_idx])
 
-def vowel_dict_to_X_y(data, scale=True):
-    X = np.vstack(data[x] for x in sorted(data.keys()))
-    y = np.hstack(np.ones(data[sorted(data.keys())[x]].shape[0],dtype=np.int32) * x
-                  for x in range(len(data)))
+def vowel_dict_to_ds(data, 
+                     scale=True, 
+                     split=True, 
+                     test_proportion=0.25, 
+                     seed=42):
+    X_train = None
+    y_train = None
+    X_test = None
+    y_test = None
+    rng = np.random.RandomState(seed)
+    for idx, key in enumerate(sorted(data.keys())):
+        X = data[key]
+        n = X.shape[0]
+        y = np.ones(n, dtype=np.int32) * idx
+        cut = np.floor(test_proportion * n)
+        p = rng.permutation(n)
+        train_idx = p[:-cut]
+        test_idx = p[-cut:]
+        if X_train is None:
+            X_train = X[train_idx]
+            y_train = y[train_idx]
+            X_test = X[test_idx]
+            y_test = y[test_idx]
+        else:
+            X_train = np.vstack((X_train, X[train_idx]))
+            y_train = np.hstack((y_train, y[train_idx]))
+            X_test = np.vstack((X_test, X[test_idx]))
+            y_test = np.hstack((y_test, y[test_idx]))
+        
+#    X = np.vstack(data[x] for x in sorted(data.keys()))
+#    y = np.hstack(np.ones(data[sorted(data.keys())[x]].shape[0],dtype=np.int32) * x
+#                  for x in range(len(data)))
     symbol_map = dict(zip(sorted(data.keys()), range(len(data))))
     if scale:
-        return preprocessing.scale(X), y, symbol_map
-    else:
-        return X,y, symbol_map
+        scaler = preprocessing.Scaler()
+        X_train = scaler.fit_transform(X_train)
+        X_test = scaler.transform(X_test)
+    return DataSet(X_train, y_train, X_test, y_test), symbol_map
     
 def dimred(dataset, method='lda', outdim=20, n_neighbors=50):
     """reduce the dimensionality of the dataset"""
@@ -81,284 +110,203 @@ def dimred(dataset, method='lda', outdim=20, n_neighbors=50):
     X_test = red.transform(dataset.X_test)
     return DataSet(X_train, dataset.y_train, X_test, dataset.y_test)
 
-def get_formant_data(vowels):
-    ifa_corpus = IFA()
-    cgn_corpus = CGN()
-    corpus = MergedCorpus([ifa_corpus, cgn_corpus])
-    fm = FormantsMeasure(corpus)
-    data = fm.sample(vowels)
-    X,y, symbol_map = vowel_dict_to_X_y(data)
-    return split_data(X, y, 0.1), symbol_map
-
-def get_mfcc_data(vowels=None):
-    ifa_corpus = IFA()
-    cgn_corpus = CGN()
-    corpus = MergedCorpus([ifa_corpus, cgn_corpus])
-    mm = MFCCMeasure(corpus)   
-    if vowels is None:
-        vowels = mm._nobs.keys() 
-    data = mm.sample(vowels)
-    X,y, symbol_map=vowel_dict_to_X_y(data)
-    return split_data(X, y, 0.1), symbol_map
-
-def print_results(cm, name):
-    print '-'*21
-    print '%s classification:' % name
-    print '-'*21
-    print 'f-score:\t%.3f' % cm.fscore()
-    print 'precision:\t%.3f' % cm.precision()
-    print 'recall:     \t%.3f' % cm.recall()
-    print '-'*21
-    
-def repr_results(cm, name):
-    res = '-'*21+'\n'
-    res += '%s classification:\n' % name
-    res += '-'*21+'\n'
-    res += 'f-score:  \t%.3f\n' % cm.fscore()
-    res += 'precision:\t%.3f\n' % cm.precision()
-    res += 'recall:   \t%.3f\n' % cm.recall()
-    res += '-'*21+'\n'
-    
-def lda_clf(dataset):
-    """perform lda classification"""
-    clf = lda.LDA()
-    clf.fit(dataset.X_train, dataset.y_train)
-    pred = clf.predict(dataset.X_test)
-    cm = ConfusionMatrix(dataset.y_test, pred)
-    #print_results(cm, 'LDA')
-    return cm,repr_results(cm,'LDA')
-    
-def svm_clf(dataset, optimize=True, verbose=True):
-    param_grid = [{'kernel':['rbf'], 'gamma':[0.0,1e-2,1e-3,1e-4,1e-5,1e-6], 'C':[1e0,1e1,1e2,1e3]},
-                  #{'kernel':['linear'], 'C':[1e0,1e1,1e2,1e3]},
-                  {'kernel':['poly'], 'degree':[3,4], 'gamma':[0.0,1e-2,1e-3,1e-4], 'C':[1e0,1e1,1e2]},
-                  #{'kernel':['sigmoid'], 'degree':[1,2,3,4,5], 'C':[1e0,1e1,1e2,1e3]}
-                  ]
-    scores = [('precision', precision_score),
-              ('recall', recall_score),
-              ('f1', f1_score)]
-
-    score_name, score_func = scores[2]
-    clf = GridSearchCV(SVC(), param_grid, score_func=score_func,verbose=2, n_jobs=1, pre_dispatch=None)
-    clf.fit(dataset.X_train, dataset.y_train, cv=StratifiedKFold(dataset.y_train, 3), verbose=2)
-    predicted = clf.predict(dataset.X_test)
-    if verbose:
-        print 'Classification report for the best estimator: '
-        print clf.best_estimator
-        print 'Tuned for %s with optimal value: %.3f' % (score_name, score_func(dataset.y_test, predicted))
-        print classification_report(dataset.y_test, predicted)
-        print 'Grid scores:'
-        pprint(clf.grid_scores_)
-        print
-    cm = ConfusionMatrix(dataset.y_test, predicted)
-    return cm,repr_results(cm, 'SVM')
-
-def logreg_clf(dataset, verbose=True):
-    param_grid = [{'penalty':['l1','l2'], 'C':[1e-1,1e0,1e1,1e2],}]
-    scores = [('precision', precision_score),
-              ('recall', recall_score),
-              ('f1', f1_score)]
-
-    score_name, score_func = scores[2]
-    clf = GridSearchCV(LogisticRegression(), param_grid, score_func=score_func,verbose=2, n_jobs=1, pre_dispatch=None)
-    clf.fit(dataset.X_train, dataset.y_train, cv=StratifiedKFold(dataset.y_train, 3), verbose=2)
-    predicted = clf.predict(dataset.X_test)
-    if verbose:
-        print 'Classification report for the best estimator: '
-        print clf.best_estimator
-        print 'Tuned for %s with optimal value: %.3f' % (score_name, score_func(dataset.y_test, predicted))
-        print classification_report(dataset.y_test, predicted)
-        print 'Grid scores:'
-        pprint(clf.grid_scores_)
-        print
-    cm = ConfusionMatrix(dataset.y_test, predicted)
-    return cm,repr_results(cm, 'LogisticRegression')   
-
-def knn_clf(dataset, verbose=True):
-    param_grid = [{'n_neighbors':[10,25,50], 'weights':['uniform','distance']}]
-    scores = [('precision', precision_score),
-              ('recall', recall_score),
-              ('f1', f1_score)]
-
-    score_name, score_func = scores[2]
-    clf = GridSearchCV(KNeighborsClassifier(), param_grid, score_func=score_func,verbose=2, n_jobs=1, pre_dispatch=None)
-    clf.fit(dataset.X_train, dataset.y_train, cv=StratifiedKFold(dataset.y_train, 3), verbose=2)
-    predicted = clf.predict(dataset.X_test)
-    if verbose:
-        print 'Classification report for the best estimator: '
-        print clf.best_estimator
-        print 'Tuned for %s with optimal value: %.3f' % (score_name, score_func(dataset.y_test, predicted))
-        print classification_report(dataset.y_test, predicted)
-        print 'Grid scores:'
-        pprint(clf.grid_scores_)
-        print
-    cm = ConfusionMatrix(dataset.y_test, predicted)
-    return cm,repr_results(cm, 'KNN')     
-
-def rnn_clf(dataset, verbose=True):
-    param_grid = [{'radius':[0.5,1.0,2.0,10.], 'weights':['uniform','distance']}]
-    scores = [('precision', precision_score),
-              ('recall', recall_score),
-              ('f1', f1_score)]
-
-    score_name, score_func = scores[2]
-    clf = GridSearchCV(RadiusNeighborsClassifier(), param_grid, score_func=score_func,verbose=2, n_jobs=1, pre_dispatch=None)
-    clf.fit(dataset.X_train, dataset.y_train, cv=StratifiedKFold(dataset.y_train, 3), verbose=2)
-    predicted = clf.predict(dataset.X_test)
-    if verbose:
-        print 'Classification report for the best estimator: '
-        print clf.best_estimator
-        print 'Tuned for %s with optimal value: %.3f' % (score_name, score_func(dataset.y_test, predicted))
-        print classification_report(dataset.y_test, predicted)
-        print 'Grid scores:'
-        pprint(clf.grid_scores_)
-        print
-    cm = ConfusionMatrix(dataset.y_test, predicted)
-    return cm,repr_results(cm, 'RNN')   
-
-def all_vowels_classification(verbose=True):
+def classify(vowels=None,features='mfcc',verbose=True):
     time0 = time()
     print 'Gathering data...',
-    # prepare corpora
+    # prepare corpora    
     ifa_corpus = IFA()
     cgn_corpus = CGN()
     corpus = MergedCorpus([ifa_corpus, cgn_corpus])
     
-    # gather mfcc data
-    mm = MFCCMeasure(corpus)
-    vowels = mm._nobs.keys()
+    if features == 'mfcc':
+        mm = MFCCMeasure(corpus)
+    elif features == 'formants':
+        mm = FormantsMeasure(corpus)
+    else:
+        raise ValueError, "features must be one of ['mfcc','formants']"
+    if vowels is None:
+        vowels = mm._nobs.keys()
+    elif not all(v in mm._nobs.keys() for v in vowels):
+        raise ValueError, "illegal vowel argument"
+    
+
+        
     data = mm.sample(vowels)
-    X,y, symbol_map=vowel_dict_to_X_y(data)
-    ds = split_data(X,y,0.1)
+    ds, symbol_map=vowel_dict_to_ds(data, test_proportion=0.1)
     print 'done. Time: %.3fs' % (time()- time0)
     
-    # now throw the book at it
+    print '-'*20
+    print '%10s%10s' % ('Vowel', '#Samples')
+    for v in mm._nobs.keys():
+        print '%10s%10d' % (v, mm._nobs[v])
+    print '-'*20    
     
-    # 1. lda classification
-    print 'Running LDA...',
     time0 = time()
-    lda_cm,lda_result = lda_clf(ds)
-    print 'done. Time: %.3fs' % (time() - time0)
+    print 'Reducing dimensions...',
+    ds_lda=None
+    for i in range(1000):
+        try:
+            ds_lda = dimred(ds, method='lda')
+            break
+        except: # problem with SVD convergence
+            continue
+    if ds_lda is None:
+        print 'SVD convergence failed after 1000 times.'
+        return
+    print 'done. Time: %.3fs' % (time()-time0)
     
-    # 2. svm classification
-    # 2.1 lda dimensionality reduction
-    print 'Running svm classification with lda dimensionality reduction...'
-    ds_lda = dimred(ds, method='lda')
-    time0=time()    
-    svm_lda_cm,svm_lda_result = svm_clf(ds_lda)
-    print 'SVM classification... done. Time: %.3fs' % (time() - time0)
-    # 2.2 lle dimensionality reduction
-    print 'Running svm classification with lle dimensionality reduction...'
+    # classify with rbf-SVM
     time0=time()
-    ds_lle = dimred(ds, method='lle')
-    svm_lle_cm, svm_lle_result = svm_clf(ds_lle)
-    print 'SVM classification...done. Time: %.3fs' % (time()-time0)
-    # 2.3 mlle dimensionality reduction
-    print 'Running svm classification with mlle dimensionality reduction...'
-    time0=time()
-    ds_mlle = dimred(ds, method='mlle')
-    svm_mlle_cm, svm_mlle_result = svm_clf(ds_mlle)
-    print 'SVM classification...done. Time: %.3fs' % (time() - time0)
-    # 2.4 isomap dimred
-    print 'Running svm classification with isomap dimensionality reduction...'
-    time0=time()
-    ds_isomap = dimred(ds, method='isomap')
-    svm_isomap_cm, svm_isomap_result = svm_clf(ds_isomap)
-    print 'SVM classification...done. Time: %.3fs' % (time() - time0)
+    print 'GRIDSEARCHING SVM...'
+    param_grid = [{'kernel':['rbf'], 'gamma':[0.0,1e-2,1e-3,1e-4], 'C':[1e0,1e1,1e2,1e3,1e4]}]
+
+    clf = GridSearchCV(SVC(), param_grid, score_func=f1_score, verbose=2)
+    clf.fit(ds_lda.X_train, ds_lda.y_train,
+            cv=StratifiedKFold(ds.y_train,3), verbose=2)
+    predicted_test = clf.predict(ds_lda.X_test)
+    predicted_train = clf.predict(ds_lda.X_train)
+    cm_test = ConfusionMatrix(ds.y_test, predicted_test)
+    cm_train = ConfusionMatrix(ds.y_train, predicted_train)
+    return cm_test, cm_train, symbol_map
+
+def pprint_cm(cm, symbol_map):
+    """pretty print the confusion matrix"""
+    print 
+    print ' '*4,
+    for v in symbol_map:
+        print '%4s' % v,
+    print '\n'
+    inds = [cm.item_map[symbol_map[v]] for v in symbol_map]
+    for v in symbol_map:
+        arr = cm.matrix[cm.item_map[symbol_map[v]]][inds]
+        print '%4s' % v,
+        for val in arr:
+            print '%4d' % val,
+        print
+
+def pprint_cm_scores(cm, symbol_map):
+    """pretty print scores"""
+    print
+    print '+' + '-'*44 + '+'
+    print '|%7s |%10s |%10s |%10s |' % ('Vowel', 'Recall', 'Precision', 'F1-score')
+    print '+' + '-'*44 + '+'
+    for v in symbol_map:
+        print '|%7s |%10.3f |%10.3f |%10.3f |' % (v,
+                                               cm.recall(symbol_map[v]),
+                                               cm.precision(symbol_map[v]),
+                                               cm.fscore(symbol_map[v]))
+    print '+' + '-'*44 + '+'        
+    print '|%7s |%10.3f |%10.3f |%10.3f |' % ('AVG', 
+                                              cm.recall(),
+                                              cm.precision(),
+                                              cm.fscore())
+    print '+' + '-'*44 + '+'    
     
-    # 3. logistic regression
-    # 3.1 lda dimred
-    print 'Running logreg classification with lda dimensionality reduction...'
-    time0=time()
-    logreg_lda_cm, logreg_lda_result = logreg_clf(ds_lda)
-    print 'Logistic Regression...done. Time %.3fs' % (time()-time0)
-    # 3.2 lle
-    print 'Running logreg with lle dimensionality reduction...'
-    time0 = time()
-    logreg_lle_cm, logreg_lle_result = logreg_clf(ds_lle)
-    print 'logistic regression...done. Time %.3fs' % (time() - time0)
-    # 3.3 mlle
-    print 'Running logreg with mlle dimensionality reduction...'
-    time0=time()
-    logreg_mlle_cm, logreg_mlle_result = logreg_clf(ds_mlle)
-    print 'logistic regression... done. Time: %.3fs' % (time()-time0)
-    # 3.4 isomap
-    print 'Running logreg with isomap dimensionality reduction...'
-    time0 = time()
-    logreg_isomap_cm, logreg_isomap_result = logreg_clf(ds_isomap)
-    print 'logistic regression... done. Time; %.3fs' % (time() - time0)
+def experiment():
+    vowel_sq = ['I','e:','|:','}']
+    cm_sq_mfcc_test, cm_sq_mfcc_train, sm_sq_mfcc = classify(vowels=vowel_sq)
     
-    # knn
-    
-    print 'Saving confusion matrices...',
-    fid = open(os.path.join(cfg_dumpdir, 'lda_cm.pkl'), 'wb')
-    cPickle.dump(lda_cm, fid)
+    fid = open(os.path.join(cfg_dumpdir, 'sq_mfcc.pkl'), 'wb')
+    cPickle.dump(cm_sq_mfcc_test, fid, -1)
+    cPickle.dump(cm_sq_mfcc_train, fid, -1)
+    cPickle.dump(sm_sq_mfcc, fid, -1)
     fid.close()
     
-    fid = open(os.path.join(cfg_dumpdir, 'svm_lda_cm.pkl'),'wb')
-    cPickle.dump(svm_lda_cm, fid)
+    cm_sq_form_test, cm_sq_form_train, sm_sq_form = classify(vowels=vowel_sq,
+                                                             features='formants')
+    fid = open(os.path.join(cfg_dumpdir, 'sq_formants.pkl'), 'wb')
+    cPickle.dump(cm_sq_form_test,fid, -1)
+    cPickle.dump(cm_sq_form_train, fid, -1)
+    cPickle.dump(sm_sq_form, fid, -1)
     fid.close()
     
-    fid = open(os.path.join(cfg_dumpdir, 'svm_lle_cm.pkl'), 'wb')
-    cPickle.dump(svm_lle_cm, fid)
+    cm_all_mfcc_test, cm_all_mfcc_train, sm_all_mfcc = classify()
+    
+    fid = open(os.path.join(cfg_dumpdir, 'all_mfcc.pkl'), 'wb')
+    cPickle.dump(cm_all_mfcc_test, fid, -1)
+    cPickle.dump(cm_all_mfcc_train, fid, -1)
+    cPickle.dump(sm_all_mfcc, fid, -1)
     fid.close()
     
-    fid = open(os.path.join(cfg_dumpdir, 'svm_mlle_cm.pkl'), 'wb')
-    cPickle.dump(svm_mlle_cm, fid)
+    cm_all_form_test, cm_all_form_train, sm_all_form = classify()
+    
+    fid = open(os.path.join(cfg_dumpdir, 'all_form.pkl'), 'wb')
+    cPickle.dump(cm_all_form_test, fid, -1)
+    cPickle.dump(cm_all_form_train, fid, -1)
+    cPickle.dump(sm_all_form, fid, -1)
     fid.close()
     
-    fid = open(os.path.join(cfg_dumpdir, 'svm_isomap_cm.pkl'), 'wb')
-    cPickle.dump(svm_isomap_cm, fid)
-    fid.close()
-    
-    fid = open(os.path.join(cfg_dumpdir, 'logreg_lda_cm.pkl'), 'wb')
-    cPickle.dump(logreg_lda_cm, fid)
-    fid.close()
-    
-    fid = open(os.path.join(cfg_dumpdir, 'logreg_lle_cm.pkl'), 'wb')
-    cPickle.dump(logreg_lle_cm, fid)
-    fid.close()
-    
-    fid = open(os.path.join(cfg_dumpdir, 'logreg_mlle_cm.pkl'), 'wb')
-    cPickle.dump(logreg_mlle_cm, fid)
-    fid.close()
-    
-    fid = open(os.path.join(cfg_dumpdir, 'logreg_isomap_cm.pkl'), 'wb')
-    cPickle.dump(logreg_isomap_cm, fid)
-    fid.close()
-    print 'done.'    
-    
-    print '-'*21
-    print 'LDA'    
-    print lda_result
-    print '-'*21
-    print 'SVM LDA'
-    print svm_lda_result
-    print '-'*21
-    print 'SVM LLE'
-    print svm_lle_result
-    print '-'*21
-    print 'SVM MLLE'
-    print svm_mlle_result
-    print '-'*21
-    print 'SVM ISOMAP'
-    print svm_isomap_result
-    print '-'*21
-    print 'LOGREG LDA'
-    print logreg_lda_result
-    print '-'*21
-    print 'LOGREG LLE'
-    print logreg_lle_result
-    print '-'*21
-    print 'LOGREG MLLE'
-    print logreg_mlle_result
-    print '-'*21
-    print 'LOGREG ISOMAP'
-    print logreg_isomap_result
+    print '+-------------------+'
+    print '| VOWEL SQUARE MFCC |'
+    print '+-------------------+'    
+    print
+    print 'HELD OUT'
+    print 
+    pprint_cm_scores(cm_sq_mfcc_test, sm_sq_mfcc)
+    print 
+    pprint_cm(cm_sq_mfcc_test, sm_sq_mfcc)
+    print 
+    print 'REDISTRIBUTION'
+    print 
+    pprint_cm_scores(cm_sq_mfcc_train,sm_sq_mfcc)
+    print
+    pprint_cm(cm_sq_mfcc_train, sm_sq_mfcc)
+    print
+    print '+-----------------------+'
+    print '| VOWEL SQUARE FORMANTS |'
+    print '+-----------------------+'
+    print 
+    print 'HELD OUT'
+    print 
+    pprint_cm_scores(cm_sq_form_test, sm_sq_form)
+    print
+    pprint_cm(cm_sq_form_test, sm_sq_form)
+    print 
+    print 'REDISTRIBUTION'
+    print
+    pprint_cm_scores(cm_sq_form_train, sm_sq_form)
+    print
+    pprint_cm(cm_sq_form_train, sm_sq_form)
+    print
+    print '+-----------------+'
+    print '| ALL VOWELS MFCC |'
+    print '+-----------------+'    
+    print
+    print 'HELD OUT'
+    print 
+    pprint_cm_scores(cm_all_mfcc_test, sm_all_mfcc)
+    print 
+    pprint_cm(cm_all_mfcc_test, sm_all_mfcc)
+    print 
+    print 'REDISTRIBUTION'
+    print 
+    pprint_cm_scores(cm_all_mfcc_train,sm_all_mfcc)
+    print
+    pprint_cm(cm_all_mfcc_train, sm_all_mfcc)
+    print
+    print '+---------------------+'
+    print '| ALL VOWELS FORMANTS |'
+    print '+---------------------+'
+    print 
+    print 'HELD OUT'
+    print 
+    pprint_cm_scores(cm_all_form_test, sm_all_form)
+    print
+    pprint_cm(cm_all_form_test, sm_all_form)
+    print 
+    print 'REDISTRIBUTION'
+    print
+    pprint_cm_scores(cm_all_form_train, sm_all_form)
+    print
+    pprint_cm(cm_all_form_train, sm_sq_form)
+    print    
+        
     
     
 if __name__ == '__main__':
-    all_vowels_classification()
+    experiment()
+    
+    
     
     
 
