@@ -140,6 +140,103 @@ def rknn(X_train, y_train, X_test,
     clf.fit(X_train, y_train)
     return clf.predict(X_test)
 
+def lda_clf(dataset):
+    """perform lda classification"""
+    clf = lda.LDA()
+    clf.fit(dataset.X_train, dataset.y_train)
+    pred = clf.predict(dataset.X_test)
+    cm = ConfusionMatrix(dataset.y_test, pred)
+    #print_results(cm, 'LDA')
+    return cm,repr_results(cm,'LDA')
+    
+def svm_clf(dataset, optimize=True, verbose=True):
+    param_grid = [{'kernel':['rbf'], 'gamma':[0.0,1e-2,1e-3,1e-4,1e-5,1e-6], 'C':[1e0,1e1,1e2,1e3]},
+                  #{'kernel':['linear'], 'C':[1e0,1e1,1e2,1e3]},
+                  {'kernel':['poly'], 'degree':[3,4], 'gamma':[0.0,1e-2,1e-3,1e-4], 'C':[1e0,1e1,1e2]},
+                  #{'kernel':['sigmoid'], 'degree':[1,2,3,4,5], 'C':[1e0,1e1,1e2,1e3]}
+                  ]
+    scores = [('precision', precision_score),
+              ('recall', recall_score),
+              ('f1', f1_score)]
+
+    score_name, score_func = scores[2]
+    clf = GridSearchCV(SVC(), param_grid, score_func=score_func,verbose=2, n_jobs=1, pre_dispatch=None)
+    clf.fit(dataset.X_train, dataset.y_train, cv=StratifiedKFold(dataset.y_train, 3), verbose=2)
+    predicted = clf.predict(dataset.X_test)
+    if verbose:
+        print 'Classification report for the best estimator: '
+        print clf.best_estimator
+        print 'Tuned for %s with optimal value: %.3f' % (score_name, score_func(dataset.y_test, predicted))
+        print classification_report(dataset.y_test, predicted)
+        print 'Grid scores:'
+        pprint(clf.grid_scores_)
+        print
+    cm = ConfusionMatrix(dataset.y_test, predicted)
+    return cm,repr_results(cm, 'SVM')
+
+def logreg_clf(dataset, verbose=True):
+    param_grid = [{'penalty':['l1','l2'], 'C':[1e-1,1e0,1e1,1e2],}]
+    scores = [('precision', precision_score),
+              ('recall', recall_score),
+              ('f1', f1_score)]
+
+    score_name, score_func = scores[2]
+    clf = GridSearchCV(LogisticRegression(), param_grid, score_func=score_func,verbose=2, n_jobs=1, pre_dispatch=None)
+    clf.fit(dataset.X_train, dataset.y_train, cv=StratifiedKFold(dataset.y_train, 3), verbose=2)
+    predicted = clf.predict(dataset.X_test)
+    if verbose:
+        print 'Classification report for the best estimator: '
+        print clf.best_estimator
+        print 'Tuned for %s with optimal value: %.3f' % (score_name, score_func(dataset.y_test, predicted))
+        print classification_report(dataset.y_test, predicted)
+        print 'Grid scores:'
+        pprint(clf.grid_scores_)
+        print
+    cm = ConfusionMatrix(dataset.y_test, predicted)
+    return cm,repr_results(cm, 'LogisticRegression')   
+
+def knn_clf(dataset, verbose=True):
+    param_grid = [{'n_neighbors':[10,25,50], 'weights':['uniform','distance']}]
+    scores = [('precision', precision_score),
+              ('recall', recall_score),
+              ('f1', f1_score)]
+
+    score_name, score_func = scores[2]
+    clf = GridSearchCV(KNeighborsClassifier(), param_grid, score_func=score_func,verbose=2, n_jobs=1, pre_dispatch=None)
+    clf.fit(dataset.X_train, dataset.y_train, cv=StratifiedKFold(dataset.y_train, 3), verbose=2)
+    predicted = clf.predict(dataset.X_test)
+    if verbose:
+        print 'Classification report for the best estimator: '
+        print clf.best_estimator
+        print 'Tuned for %s with optimal value: %.3f' % (score_name, score_func(dataset.y_test, predicted))
+        print classification_report(dataset.y_test, predicted)
+        print 'Grid scores:'
+        pprint(clf.grid_scores_)
+        print
+    cm = ConfusionMatrix(dataset.y_test, predicted)
+    return cm,repr_results(cm, 'KNN')     
+
+def rnn_clf(dataset, verbose=True):
+    param_grid = [{'radius':[0.5,1.0,2.0,10.], 'weights':['uniform','distance']}]
+    scores = [('precision', precision_score),
+              ('recall', recall_score),
+              ('f1', f1_score)]
+
+    score_name, score_func = scores[2]
+    clf = GridSearchCV(RadiusNeighborsClassifier(), param_grid, score_func=score_func,verbose=2, n_jobs=1, pre_dispatch=None)
+    clf.fit(dataset.X_train, dataset.y_train, cv=StratifiedKFold(dataset.y_train, 3), verbose=2)
+    predicted = clf.predict(dataset.X_test)
+    if verbose:
+        print 'Classification report for the best estimator: '
+        print clf.best_estimator
+        print 'Tuned for %s with optimal value: %.3f' % (score_name, score_func(dataset.y_test, predicted))
+        print classification_report(dataset.y_test, predicted)
+        print 'Grid scores:'
+        pprint(clf.grid_scores_)
+        print
+    cm = ConfusionMatrix(dataset.y_test, predicted)
+    return cm,repr_results(cm, 'RNN') 
+
 
 
 
