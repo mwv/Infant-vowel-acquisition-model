@@ -23,7 +23,7 @@ __date__ = 'Fri Apr  6 01:06:21 2012'
 from collections import Counter
 
 from .childes import ChildesCorpus
-from .ifa import IFA
+from ..speechcorpora.ifa import IFA
 from ..util.transcript_formats import vowels_sampa
 
 def count_childes_vowels(phone_dict, corpora=None):
